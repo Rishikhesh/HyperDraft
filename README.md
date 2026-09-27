@@ -24,6 +24,10 @@ runs Bun works (a VPS, Fly.io, Render, Railway). Set the same variables as in
 `.env.example` on the host; set `TRUST_PROXY=true` if it sits behind a proxy.
 Put it behind HTTPS.
 
+**Vercel:** import the repo; `vercel.json` runs `api/chat.ts` on Vercel's Bun
+runtime and Vercel serves the built app. Add the `.env.example` variables in
+Project → Settings → Environment Variables (`TRUST_PROXY` isn't needed there).
+
 What protects it:
 
 - API keys stay on the server; the browser never sees them.

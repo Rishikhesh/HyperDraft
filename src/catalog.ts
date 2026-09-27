@@ -3,7 +3,7 @@
 import { defineCatalog } from '@json-render/core'
 import { schema } from '@json-render/react/schema'
 import { shadcnComponentDefinitions } from '@json-render/shadcn/catalog'
-import { blockDefinitions } from '@/blocks/definitions'
+import { blockDefinitions } from './blocks/definitions' // relative: the server imports this too
 
 // json-render's shadcn components + our page-level blocks
 export const componentDefinitions = {
