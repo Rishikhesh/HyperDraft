@@ -74,6 +74,20 @@ export async function generate(
   }
 
   const isEdit = decision.intent === 'edit'
+  // "Remove it" with nothing selected: ask, instead of guessing and
+  // deleting the wrong thing. Only for removals: a vague add or style
+  // change can't destroy anything, so the LLM just tries.
+  const vagueRemove =
+    decision.edit?.kind === 'remove' && decision.edit.part === 'unclear'
+  if (isEdit && vagueRemove) {
+    send({
+      kind: 'reply',
+      text:
+        'Which part? Switch to Edit, click it in the preview, then send ' +
+        'your message again. Or name it, e.g. "remove the FAQ section".',
+    })
+    return
+  }
   const changes = tracker(isEdit ? spec : { root: '', elements: {} }, send)
   const finish = (model: string) =>
     send({ kind: 'done', ...changes.result(), model, ms: elapsed() })
@@ -147,7 +161,9 @@ async function tryWithoutLlm(
     edit.targetConfidence >= TARGET_SURE
   if (!sure) return false
 
-  if (edit.kind === 'remove') {
+  // Deleting elements is for whole ones. Removing an item inside a
+  // block ("the pro plan") means rewriting its list: the LLM does that.
+  if (edit.kind === 'remove' && edit.part === 'whole') {
     const patches = removePatches(spec, edit.target)
     if (!patches) return false
     send({

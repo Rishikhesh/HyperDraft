@@ -42,6 +42,20 @@ export const editKinds = {
 
 export type Scope = 'focused' | 'full'
 
+// What an edit is about. Plans, features, FAQ questions… are items in
+// one block's props, not elements: removing "the pro plan" must not
+// delete the whole PricingTable.
+export const editParts = {
+  whole: 'The whole element or section',
+  item:
+    'Only some items or part inside it: one plan, a feature, a ' +
+    'question, a link, a list entry, a word',
+  unclear:
+    'It does not say which thing it means (e.g. "remove it" with no ' +
+    'element selected)',
+}
+export type EditPart = keyof typeof editParts
+
 export type Decision = {
   intent: Intent
   pageType: PageType
@@ -53,6 +67,7 @@ export type Decision = {
     kindConfidence: number
     target: string // element id, or "page"
     targetConfidence: number
+    part: EditPart
   } | null
 }
 
@@ -86,6 +101,10 @@ export async function decide(
       'Which element of `current_ui` does `request` mostly change? ' +
         'If `selected_element` is set, words like "this" mean it.',
       targetOptions(spec),
+    ),
+    part: choice(
+      'Is `request` about that whole element, or part of it?',
+      editParts,
     ),
   }
 
@@ -147,6 +166,11 @@ export async function decide(
         // A clicked element beats Jev's guess
         target: selectedId ?? String(answers.target.choice),
         targetConfidence: selectedId ? 1 : answers.target.confidence,
+        // With an element selected, "it" is never unclear
+        part:
+          selectedId && answers.part.choice === 'unclear'
+            ? 'whole'
+            : answers.part.choice,
       }
 
   return { intent, pageType, scope, components, edit }
