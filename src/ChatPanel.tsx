@@ -105,12 +105,12 @@ export default function ChatPanel({
       {/* Name, and a reminder that it's still early */}
       <header className="flex items-center gap-2 pb-1">
         <img src="/favicon.svg" alt="" className="size-5" />
-        <span className="font-semibold tracking-tight">saywhat</span>
+        <span className="font-semibold tracking-tight">HyperDraft</span>
         <span
           className="rounded-full border border-primary/30 bg-primary/10 px-2
             py-0.5 text-[10px] font-semibold tracking-wide text-primary
             uppercase"
-          title="saywhat is still being built: expect rough edges"
+          title="HyperDraft is still being built: expect rough edges"
         >
           Beta
         </span>

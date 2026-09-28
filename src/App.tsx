@@ -162,7 +162,7 @@ export default function App() {
     )
     const link = document.createElement('a')
     link.href = url
-    link.download = 'saywhat-ui.json'
+    link.download = 'hyperdraft-ui.json'
     link.click()
     URL.revokeObjectURL(url)
   }

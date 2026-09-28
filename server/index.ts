@@ -19,4 +19,4 @@ const server = Bun.serve({
   },
   fetch: serveStatic, // everything else: the built app, if there is one
 })
-console.log(`saywhat on http://localhost:${server.port}`)
+console.log(`HyperDraft on http://localhost:${server.port}`)
