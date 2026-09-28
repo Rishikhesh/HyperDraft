@@ -28,9 +28,19 @@ const menu = componentNames
   })
   .join('\n')
 
-// Jev sets the dials; the planner is told them instead
+// Jev sets the dials and the page's look; the planner is told the dials
 const pageOptions = Object.entries(optionProps('Page'))
-  .filter(([prop]) => !['variance', 'motion', 'density'].includes(prop))
+  .filter(
+    ([prop]) =>
+      ![
+        'variance',
+        'motion',
+        'density',
+        'background',
+        'texture',
+        'surface',
+      ].includes(prop),
+  )
   .map(([prop, values]) => `${prop}: ${values.join(' | ')}`)
   .join('; ')
 
@@ -48,7 +58,7 @@ Think about what THIS product or request needs, then design for it:
 - Build with the designed blocks (Hero, FeatureGrid, Stats, Testimonials, PricingTable, Steps, CallToAction, Carousel, Marquee, Chart, AppShell, the showcase blocks…): they look finished. Vary a page through their layouts, content and effects, and through which sections it has and their order. Basic pieces (Stack, Text, List, Input) are for what no block covers, not a replacement for blocks.
 - A landing page or site opens with a strong first screen: a Hero (centered, split or background) or a Split, with a clear headline and a call to action. Include only the sections that serve this product, in a fitting order.
 - The direction should feel specific to this subject, not generic "clean and modern". Before choosing, weigh a few genuinely different directions (light or dark, calm or loud, dense or airy, playful or serious) and pick what fits this subject best, not your usual default.
-- Page effects are optional. Many subjects want a plain or muted page with no texture or glass; use effects only when they serve the mood.
+- The page's background and texture are chosen by the app; describe the mood you want in the direction and plan sections that fit it.
 - Avoid what makes pages look AI-made: placeholder names (Acme, Nexus), filler verbs (Elevate, Seamless, Unleash), perfect numbers (99.99%), generic people (John Doe), and version or numbered eyebrows.
 - An app screen with a sidebar (dashboard, admin, settings): make AppShell the first section; the sections after it become its main area, so plan them as the screen's content.
 - A focused request (a login form, a pricing table, a chart) is one or two sections: build that one thing fully, nothing around it.

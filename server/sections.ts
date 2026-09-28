@@ -87,8 +87,12 @@ export async function buildPage(
   }
 
   let planModel = ''
+  // Jev's page look, once it has answered (usually before planning ends)
+  let look: Record<string, string> = {}
   let pageOptions: Promise<Record<string, string> | null> =
     Promise.resolve(null)
+  const watchLook = (answer: Promise<Record<string, string> | null>) =>
+    answer.then((picked) => (look = picked ?? {}))
   if (scope === 'focused') {
     // One focused thing (a login form, a pricing table) needs no plan:
     // the request is the section's job; Jev picks the page's look
@@ -97,10 +101,18 @@ export async function buildPage(
       ...dials,
       ...(product && { palette: product }),
     }
-    pageOptions = decidePage(message).catch(() => null)
+    pageOptions = decidePage(message, dials.motion).catch(() => null)
+    void watchLook(pageOptions)
     addSection({ id: 'main', job: message, uses: components })
   } else {
-    // A whole page is planned; sections start while planning goes on
+    // A whole page is planned; sections start while planning goes on.
+    // Its look (background, texture, glass) is Jev's, sampled, meanwhile
+    pageOptions = decidePage(message, dials.motion, [
+      'background',
+      'texture',
+      'surface',
+    ]).catch(() => null)
+    void watchLook(pageOptions)
     send({ kind: 'step', text: 'Planning the page…' })
     const plan = await planPage(
       message,
@@ -113,6 +125,7 @@ export async function buildPage(
           // Several sections stack from the top; centering is for one
           head.page = {
             ...page,
+            ...look,
             ...dials,
             align: 'top',
             ...(product && { palette: product }),
@@ -181,6 +194,8 @@ async function buildSection(
     `Design direction for the whole page: ${head.direction || 'your choice'}\n\n` +
     `Build the section "${section.id}": ${section.job}\n` +
     `Suggested components: ${section.uses.join(', ') || 'your choice'}.\n` +
+    `Page dials: motion ${head.page.motion ?? 'subtle'}, variance ` +
+    `${head.page.variance ?? 'medium'}. ${effectsFor(head.page.motion)}\n` +
     (layoutNote ? `Use ${layoutNote}.\n` : '') +
     `Its outermost element's id is "${section.id}"; every other ` +
     `element's id starts with "${section.id}-".`
@@ -252,6 +267,18 @@ function frameInAppShell(changes: ReturnType<typeof tracker>) {
     path: '/elements/page/children',
     value: [shell.shell],
   })
+}
+
+// How much the effect options should be used, from the motion dial
+function effectsFor(motion: string | undefined): string {
+  if (motion === 'still') return 'Use no effects or animation.'
+  if (motion === 'lively') {
+    return (
+      'Use effects generously: title effects, card effects, button ' +
+      'effects, moving illustrations, count-up numbers.'
+    )
+  }
+  return 'Give this section one standout effect where it fits.'
 }
 
 // Children lists refer to elements by id, so rename those too: in a

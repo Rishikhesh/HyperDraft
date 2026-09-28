@@ -45,6 +45,7 @@ export function repair(spec: Spec) {
     if (element.type === 'TabbedContent' && isArray(tabs)) {
       element.props.tabs = tabs.slice(0, element.children.length)
     }
+    unquoteBindings(element)
     fixProps(element)
     listAsContainer(element)
     // A palette id the app doesn't know: none
@@ -96,6 +97,16 @@ function fixProps(element: UIElement) {
     const value = get(element.props, path)
     set(element.props, path, null)
     if (invalid(path)) set(element.props, path, value) // null not allowed
+  }
+}
+
+// A binding written as text: "{ $state: \"/countdown/days\" }" would show
+// literally. Made into the real binding, it shows the value (12).
+const BINDING_TEXT = /^\s*\{\s*"?\$state"?\s*:\s*"([^"]+)"\s*\}\s*$/
+function unquoteBindings(element: UIElement) {
+  for (const [prop, value] of Object.entries(element.props)) {
+    const path = typeof value === 'string' && BINDING_TEXT.exec(value)?.[1]
+    if (path) element.props[prop] = { $state: path }
   }
 }
 

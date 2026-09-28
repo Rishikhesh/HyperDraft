@@ -87,10 +87,9 @@ export const designRules = [
     'the slides, each a real element (Card, Image). ' +
     'Components have effect options (Page background and texture, ' +
     'titleEffect, cardEffect, Button effect, Section reveal, Stats ' +
-    'countUp): their descriptions say what each looks like. Use them ' +
-    'when the request asks for motion, effects or something ' +
-    'eye-catching, and pick what fits the mood. One or two standout ' +
-    'effects per page beat many competing ones.',
+    'countUp, illustrations): their descriptions say what each looks ' +
+    'like. Use them to give the page character, as much as its motion ' +
+    'dial says, and pick what fits the mood.',
   'Motion is welcome but subtle. Card-based blocks take hover "lift" or ' +
     '"glow". In className you may use: ' +
     '"motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-500 ' +

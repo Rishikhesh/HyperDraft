@@ -518,23 +518,25 @@ function changedProps(
 // app never gets a playful one.
 export async function decidePage(
   message: string,
+  motion = 'subtle', // the page's motion dial
+  props = ['background', 'texture', 'surface', 'font', 'headingFont'],
 ): Promise<Record<string, string>> {
-  const options = pick(optionProps('Page'), [
-    'background',
-    'texture',
-    'surface',
-    'font',
-    'headingFont',
-  ])
+  const options = pick(optionProps('Page'), props)
   const { answers } = await client.systemOne({
     state: {
       request: message,
+      motion:
+        motion === 'lively'
+          ? 'lively: prefer animated backgrounds and textures'
+          : motion === 'still'
+            ? 'still: prefer calm, static backgrounds'
+            : 'subtle: a background with character, gently animated or static',
       option_help: optionHelp([{ type: 'Page', props: {}, children: [] }]),
     },
     questions: mapValues(options, (values, prop) =>
       choice(
-        `Which "${prop}" suits a page for \`request\`? \`option_help\` ` +
-          'explains the values.',
+        `Which "${prop}" suits a page for \`request\` with \`motion\`? ` +
+          '`option_help` explains the values.',
         Object.fromEntries(values.map((value) => [value, null])),
       ),
     ),
