@@ -4,7 +4,7 @@
 import { isArray, isPlainObject, isString, mapValues } from 'lodash-es'
 
 const SAFE_HREF = /^(https?:|mailto:|tel:|#|\/|\.\/|\?)/i
-const SAFE_SRC = /^(https?:|\/|data:image\/(png|jpe?g|gif|webp|avif);)/i
+const SAFE_SRC = /^(https?:|data:image\/(png|jpe?g|gif|webp|avif);)/i
 
 // "javascript:x" → "#". Anything without a scheme ("pricing") is a
 // relative link, which is safe.
@@ -12,8 +12,11 @@ export function safeUrl(key: 'href' | 'src', url: string): string {
   const trimmed = url.trim()
   const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed)
   const allowed = key === 'href' ? SAFE_HREF : SAFE_SRC
-  if (!hasScheme || allowed.test(trimmed)) return trimmed
-  return key === 'href' ? '#' : ''
+  if (allowed.test(trimmed)) return trimmed
+  if (key === 'href') return hasScheme ? '#' : trimmed
+  // A page has no image files of its own: "/images/work-1.jpg" would
+  // only leave a blank gap, so it's dropped (blocks draw art instead)
+  return ''
 }
 
 // Props that hold an image or video URL (our blocks: "image", "video")

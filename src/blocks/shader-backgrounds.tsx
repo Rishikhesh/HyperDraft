@@ -46,13 +46,16 @@ export default function ShaderBackground({
   const dark = useDark()
   const colors = palette ?? indigo
   if (kind === 'aurora-flow') {
+    // Full strength drowns dark text on a light page; soften it there
     return (
-      <Aurora
-        colorStops={[colors.primary, colors.accent, colors.secondary]}
-        amplitude={1}
-        blend={0.5}
-        lightMode={!dark}
-      />
+      <div className="size-full opacity-40 dark:opacity-100">
+        <Aurora
+          colorStops={[colors.primary, colors.accent, colors.secondary]}
+          amplitude={1}
+          blend={0.5}
+          lightMode={!dark}
+        />
+      </div>
     )
   }
   if (kind === 'threads') {

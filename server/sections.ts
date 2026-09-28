@@ -270,16 +270,25 @@ function frameInAppShell(changes: ReturnType<typeof tracker>) {
   })
 }
 
-// How much the effect options should be used, from the motion dial
+// How much the effect options should be used, from the motion dial.
+// Sections are built separately, so each gets a share of the page's
+// budget: a page with an effect on every title and button looks cheap.
 function effectsFor(motion: string | undefined): string {
   if (motion === 'still') return 'Use no effects or animation.'
   if (motion === 'lively') {
     return (
-      'Use effects generously: title effects, card effects, button ' +
-      'effects, moving illustrations, count-up numbers.'
+      'The page is lively: give this section one or two effects that ' +
+      'suit its content (a title effect on its main title, count-up ' +
+      'stats, a moving illustration, a card effect). Small headings and ' +
+      'secondary buttons stay plain; never the same effect on repeated ' +
+      'items.'
     )
   }
-  return 'Give this section one standout effect where it fits.'
+  return (
+    'Effects are rare on this page: at most one in this section, only ' +
+    'if it is the first screen or a key moment. Titles and buttons ' +
+    'otherwise stay plain.'
+  )
 }
 
 // Children lists refer to elements by id, so rename those too: in a

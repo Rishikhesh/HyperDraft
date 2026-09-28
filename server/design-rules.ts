@@ -48,6 +48,12 @@ export const designRules = [
   'Every form ends with a primary submit Button.',
   'To switch between panels use TabbedContent (one child per tab), not ' +
     'Tabs. Never read state paths you did not put in /state.',
+  'Write content straight into props (items, plans, features, stats, ' +
+    'words). /state is only for form inputs and switches, never for ' +
+    "holding the page's text or lists.",
+  'Never put a Section inside a Section, and no Section without a ' +
+    'title just to wrap one thing: inside a section, lay out with ' +
+    'Stack, Grid, Split or the blocks.',
 
   // Styling: options first, Tailwind classes for everything else
   "Use a component's own options first (background, surface, hover, " +
@@ -88,8 +94,9 @@ export const designRules = [
     'Components have effect options (Page background and texture, ' +
     'titleEffect, cardEffect, Button effect, Section reveal, Stats ' +
     'countUp, illustrations): their descriptions say what each looks ' +
-    'like. Use them to give the page character, as much as its motion ' +
-    'dial says, and pick what fits the mood.',
+    'like. Pick what fits the mood, as much as the motion dial says: ' +
+    'one or two standout effects make a page; effects on every title ' +
+    'and button make it look cheap.',
   'Motion is welcome but subtle. Card-based blocks take hover "lift" or ' +
     '"glow". In className you may use: ' +
     '"motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-500 ' +

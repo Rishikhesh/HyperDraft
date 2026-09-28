@@ -1,12 +1,14 @@
 // Fixes common, harmless model slips before the spec is checked.
 import type { Spec, UIElement } from '@json-render/core'
 import {
+  findKey,
   get,
   has,
   includes,
   isArray,
   isEqual,
   isPlainObject,
+  isString,
   keys,
   set,
 } from 'lodash-es'
@@ -31,6 +33,7 @@ const SECTION_CONTENT = [
 
 export function repair(spec: Spec) {
   wrapBareBlocks(spec)
+  contentFromState(spec)
 
   for (const element of Object.values(spec.elements)) {
     // Some models leave out "children" or "props" on simple elements
@@ -56,6 +59,92 @@ export function repair(spec: Spec) {
       !has(palettes, String(palette))
     ) {
       element.props.palette = null
+    }
+  }
+  dropEmptyBlocks(spec)
+}
+
+const parentOf = (spec: Spec, id: string) =>
+  findKey(spec.elements, (element) => element.children?.includes(id))
+
+// Models sometimes keep a page's content in /state and point blocks at
+// it. Content belongs in the props, so it shows even when the pointing
+// goes wrong:
+// - a block's list given as {"$state": "/metrics"} gets the list itself
+// - a block's empty list is filled from a /state list whose items fit
+//   it (Stats items [] beside /state/metrics [{label, value}])
+// - a card written as a template ("${quote}", "${name}") for each item of
+//   a /state list is repeated over that list, as json-render does it
+function contentFromState(spec: Spec) {
+  const state = (spec.state ?? {}) as Record<string, unknown>
+  const at = (path: string) => get(state, path.split('/').filter(Boolean))
+  for (const [id, element] of Object.entries(spec.elements)) {
+    for (const [prop, value] of Object.entries(element.props ?? {})) {
+      const path = get(value, '$state')
+      const list = isString(path) && keys(value).length === 1 && at(path)
+      if (isArray(list) && list.length) {
+        element.props[prop] = structuredClone(list)
+      }
+    }
+    const definition = get(componentDefinitions, element.type)
+    const shape = definition && (definition.props as z.ZodObject).shape
+    for (const prop of keys(shape ?? {})) {
+      const current = get(element.props, prop)
+      if (!(current == null || (isArray(current) && !current.length))) continue
+      if (!shape[prop].safeParse([]).success) continue // not a list
+      const fits = Object.values(state).find(
+        (list) =>
+          isArray(list) && list.length && shape[prop].safeParse(list).success,
+      )
+      if (fits) element.props[prop] = structuredClone(fits)
+    }
+    const text = get(element.props, 'text')
+    const field = isString(text) && /^\$\{(\w+)\}$/.exec(text)?.[1]
+    if (!field) continue
+    const listKey = keys(state).find((key) => has(get(state, [key, 0]), field))
+    const item = parentOf(spec, id)
+    const container = item && parentOf(spec, item)
+    if (!listKey || !container) continue
+    spec.elements[container].repeat ??= { statePath: `/${listKey}` }
+    element.props.text = { $item: field }
+  }
+}
+
+// A block whose content list is empty (Stats with no items) would show
+// as a blank band, and so would a Section left holding nothing: both go
+function dropEmptyBlocks(spec: Spec) {
+  const isEmpty = (element: UIElement) => {
+    if (element.children?.length) return false
+    // A titled section can be content in itself (a dashboard tile)
+    if (element.type === 'Section') {
+      return !get(element.props, 'title') && !get(element.props, 'subtitle')
+    }
+    const definition = get(componentDefinitions, element.type)
+    if (!definition || definition.slots) return false
+    const shape = (definition.props as z.ZodObject).shape
+    const required = keys(shape).filter(
+      (prop) =>
+        shape[prop].safeParse([]).success &&
+        !shape[prop].safeParse(null).success,
+    )
+    return (
+      required.length > 0 &&
+      required.every((prop) => {
+        const value = get(element.props, prop)
+        return value == null || (isArray(value) && !value.length)
+      })
+    )
+  }
+  for (let found = true; found;) {
+    const id = findKey(
+      spec.elements,
+      (element, key) => key !== spec.root && isEmpty(element),
+    )
+    found = Boolean(id)
+    if (!id) continue
+    delete spec.elements[id]
+    for (const element of Object.values(spec.elements)) {
+      element.children = element.children?.filter((child) => child !== id)
     }
   }
 }
