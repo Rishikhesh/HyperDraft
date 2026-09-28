@@ -1,5 +1,20 @@
 // Extra instructions for the LLM, added to json-render's own rules.
 // General design principles, not recipes for particular pages.
+import { catalogOf, type ComponentName } from '../src/catalog'
+
+// The whole system prompt: our rules first, then the components. Calls
+// then start with the same text, and providers that cache a prompt's
+// beginning (Gemini, DeepSeek, via OpenRouter too) bill it at ~1/10.
+// Components that every section gets should come first, for the same
+// reason.
+export function uiPrompt(components: ComponentName[], rules: string[]) {
+  return catalogOf(components).prompt({
+    mode: 'inline', // a few words first (shown to the user), then patches
+    system:
+      'You are a UI generator that outputs JSON.\n\n' +
+      `RULES FOR THIS APP:\n${rules.map((rule) => `- ${rule}`).join('\n')}`,
+  })
+}
 
 // For edits of a whole page (the LLM sees and changes the Page)
 export const pageRules = [

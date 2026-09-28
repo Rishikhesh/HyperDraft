@@ -1,32 +1,7 @@
 // The LLM: writes the UI as JSON patch lines, streamed as they arrive.
-// Every provider here speaks the same OpenAI-compatible API.
-
-// `thinking` gives the request body fields that let a model think
-// before answering (better plans) or not (faster output)
-const PROVIDERS: Record<
-  string,
-  {
-    url: string
-    key?: string
-    thinking?: (model: string, on: boolean) => object
-  }
-> = {
-  google: {
-    url: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    key: process.env.GOOGLE_API_KEY,
-    // Gemini takes reasoning_effort; Gemma rejects it (HTTP 400)
-    thinking: (model, on) =>
-      model.startsWith('gemini')
-        ? { reasoning_effort: on ? 'low' : 'none' }
-        : {},
-  },
-  nvidia: {
-    url: 'https://integrate.api.nvidia.com/v1',
-    key: process.env.NVIDIA_API_KEY,
-    thinking: (_, on) => ({ chat_template_kwargs: { enable_thinking: on } }),
-  },
-}
-type Model = { provider: string; name: string }
+// Every model comes through OpenRouter (openrouter.ai/models): one key
+// for many models, paid and ":free".
+const API_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
 // What the LLM is used for. Each job can have its own models:
 // planning a page wants the strongest model and may think; building
@@ -37,25 +12,16 @@ const THINKS: Record<Job, boolean> = { plan: true, build: false, edit: false }
 const TEMPERATURE: Record<Job, number> = { plan: 1, build: 0.7, edit: 0.4 }
 
 // LLM_PLAN_MODELS / LLM_BUILD_MODELS / LLM_EDIT_MODELS, each falling back
-// to LLM_MODELS, e.g. "google:gemini-3.1-flash-lite,nvidia:nvidia/…".
-// Tried in order: a busy model makes the next attempt use the next one.
-// Models whose provider has no key in .env are left out.
-function modelsFor(job: Job): Model[] {
-  const variable = `LLM_${job.toUpperCase()}_MODELS`
-  const list = process.env[variable] || process.env.LLM_MODELS || ''
-  return list
+// to LLM_MODELS: OpenRouter ids, e.g. "google/gemini-3.5-flash,
+// nvidia/nemotron-3-super-120b-a12b:free". Tried in order: a busy model
+// makes the next attempt use the next one.
+function modelsFor(job: Job): string[] {
+  const list =
+    process.env[`LLM_${job.toUpperCase()}_MODELS`] || process.env.LLM_MODELS
+  return (list ?? '')
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean)
-    .map((entry) => {
-      const colon = entry.indexOf(':') // names can contain "/" but not ":"
-      const provider = entry.slice(0, colon)
-      if (!(provider in PROVIDERS)) {
-        throw new Error(`${variable}: unknown provider in "${entry}"`)
-      }
-      return { provider, name: entry.slice(colon + 1) }
-    })
-    .filter((model) => PROVIDERS[model.provider].key)
 }
 
 const MAX_ATTEMPTS = 3 // at least; every listed model gets one try
@@ -85,7 +51,7 @@ export class BusyError extends Error {
 type Result = { model: string }
 
 // Yields one complete line of LLM output at a time.
-// Returns which model answered, as "provider:model".
+// Returns which model answered.
 //
 // Retries when the model is busy, but only before the first line.
 // After that, patches have already reached the preview, and a retry
@@ -97,8 +63,8 @@ export async function* streamLines(
   signal: AbortSignal,
 ): AsyncGenerator<string, Result> {
   const models = modelsFor(job)
-  if (!models.length) {
-    throw new Error('Set LLM_MODELS and a matching API key in .env')
+  if (!models.length || !process.env.OPENROUTER_API_KEY) {
+    throw new Error('Set OPENROUTER_API_KEY and LLM_MODELS in .env')
   }
   const attempts = Math.max(MAX_ATTEMPTS, models.length)
   const IDLE_TIMEOUT_MS = idleTimeout(job)
@@ -106,7 +72,7 @@ export async function* streamLines(
 
   for (let attempt = 1; ; attempt++) {
     const model = models[(attempt - 1) % models.length]
-    const label = `${model.provider}:${model.name}`
+    const label = model
     // Aborts this request if the model goes quiet for too long.
     // The clock restarts every time a line arrives.
     const silence = new AbortController()
@@ -152,8 +118,7 @@ export async function* streamLines(
       }
       const next = models[attempt % models.length]
       console.warn(
-        `${label} busy → trying ${next.provider}:${next.name} ` +
-          `(attempt ${attempt + 1})`,
+        `${label} busy → trying ${next} ` + `(attempt ${attempt + 1})`,
       )
       await Bun.sleep(RETRY_DELAY_MS * 2 ** (attempt - 1))
     } finally {
@@ -164,24 +129,29 @@ export async function* streamLines(
 
 // One request to one model, no retries
 async function* streamOnce(
-  model: Model,
+  model: string,
   job: Job,
   system: string,
   user: string,
   signal: AbortSignal,
 ): AsyncGenerator<string, void> {
-  const provider = PROVIDERS[model.provider]
-  const response = await fetch(`${provider.url}/chat/completions`, {
+  const response = await fetch(API_URL, {
     method: 'POST',
     signal,
     headers: {
-      Authorization: `Bearer ${provider.key}`,
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
+      'X-Title': 'HyperDraft', // names the app on openrouter.ai
     },
     body: JSON.stringify({
-      ...provider.thinking?.(model.name, THINKS[job]),
+      // Think before planning, not before writing UI; the thinking stays
+      // out of the stream. `usage` adds the call's cost at the end.
+      reasoning: THINKS[job]
+        ? { effort: 'low', exclude: true }
+        : { enabled: false },
+      usage: { include: true },
       temperature: TEMPERATURE[job],
-      model: model.name,
+      model,
       stream: true,
       messages: [
         { role: 'system', content: system },
@@ -210,6 +180,15 @@ async function* streamOnce(
       // Providers can fail mid-stream and report it inside a chunk
       if (chunk.error) throw toError(chunk.error.code, chunk.error.message)
       text += chunk.choices?.[0]?.delta?.content ?? ''
+      // OpenRouter reports what the call cost, in the last chunk
+      if (chunk.usage?.cost != null) {
+        const { prompt_tokens, completion_tokens, cost } = chunk.usage
+        const cached = chunk.usage.prompt_tokens_details?.cached_tokens ?? 0
+        console.log(
+          `${job} ${model}: ${prompt_tokens} in (${cached} cached), ` +
+            `${completion_tokens} out, $${Number(cost).toFixed(4)}`,
+        )
+      }
 
       const lines = text.split('\n')
       text = lines.pop() ?? ''

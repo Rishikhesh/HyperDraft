@@ -3,8 +3,8 @@
 // LLM call, all in parallel, into one shared page.
 import { startCase, uniq } from 'lodash-es'
 import type { ChatEvent } from '../src/api'
-import { catalogOf, type ComponentName } from '../src/catalog'
-import { designRules, sectionRules } from './design-rules'
+import type { ComponentName } from '../src/catalog'
+import { designRules, sectionRules, uiPrompt } from './design-rules'
 import { streamLines } from './llm'
 import { planPage, type Plan, type Section } from './plan'
 import type { Scope } from './jev'
@@ -186,10 +186,7 @@ async function buildSection(
   const layoutNote = Object.entries(layouts)
     .map(([type, layout]) => `${type} with layout "${layout}"`)
     .join(', ')
-  const system = catalogOf(components).prompt({
-    mode: 'inline',
-    customRules: [...sectionRules, ...designRules],
-  })
+  const system = uiPrompt(components, [...sectionRules, ...designRules])
   const user =
     `The page: ${message}\n` +
     `Design direction for the whole page: ${head.direction || 'your choice'}\n\n` +

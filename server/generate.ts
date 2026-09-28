@@ -3,8 +3,7 @@
 import { buildUserPrompt, type Spec } from '@json-render/core'
 import { get, has, isEmpty, pick, startCase, uniq } from 'lodash-es'
 import type { ChatEvent, ChatRequest } from '../src/api'
-import { catalogOf } from '../src/catalog'
-import { designRules, pageRules } from './design-rules'
+import { designRules, pageRules, uiPrompt } from './design-rules'
 import { outline } from './describe'
 import { optionProps, propPatches, removePatches, scopeOf } from './edit'
 import { decide, decideProps, TARGET_SURE, type Decision } from './jev'
@@ -137,10 +136,7 @@ export async function generate(
 
   // 3. The LLM writes the rest, using only the components Jev picked
   send({ kind: 'step', text: 'Writing the change…' })
-  const system = catalogOf(decision.components).prompt({
-    mode: 'inline', // a few words first (shown to the user), then patches
-    customRules: [...pageRules, ...designRules],
-  })
+  const system = uiPrompt(decision.components, [...pageRules, ...designRules])
   const user = buildUserPrompt({
     prompt: withHistory(
       history,

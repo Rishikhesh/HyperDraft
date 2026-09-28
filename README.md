@@ -7,7 +7,7 @@ libraries.
 
 ```sh
 bun install
-cp .env.example .env   # add TYPESAFE_API_KEY, GOOGLE_API_KEY, NVIDIA_API_KEY
+cp .env.example .env   # add TYPESAFE_API_KEY and OPENROUTER_API_KEY
 bun dev                # app on http://localhost:5173, API on :3001
 ```
 
@@ -92,13 +92,14 @@ preview ◄─ patches stream in and animate; chat shows each step live
 | `server/edit.ts`            | Removes, sets options, finds an edit's scope    |
 | `server/repair.ts`          | Fixes model slips: brackets, props, containers  |
 | `server/design-rules.ts`    | Design instructions added to the AI prompt      |
-| `server/llm.ts`             | LLM streaming per job (Google, NVIDIA)          |
+| `server/llm.ts`             | LLM streaming per job, via OpenRouter           |
 | `server/sanitize.ts`        | Makes AI-written links and images safe          |
 | `server/rate-limit.ts`      | Requests per visitor per minute                 |
 | `server/static.ts`          | Serves the built app in production              |
 
-The LLM runs on your own free Google AI Studio and NVIDIA quotas, trying the
-models in `LLM_MODELS` in order. Jev answers greetings without using the LLM.
+The LLM runs through OpenRouter (free and paid models, one key), trying the
+models in `LLM_MODELS` in order. OpenRouter calls log their cost; set a credit
+limit on the key. Jev answers greetings without using the LLM.
 
 ## Credits
 
