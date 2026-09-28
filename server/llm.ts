@@ -60,6 +60,9 @@ function modelsFor(job: Job): Model[] {
 
 const MAX_ATTEMPTS = 3 // at least; every listed model gets one try
 const RETRY_DELAY_MS = 2000 // doubles each attempt: 2s, then 4s
+// When every model refused and a rate limit says it resets soon, wait
+// that long and try that model once more. Longer waits aren't worth it.
+const MAX_QUOTA_WAIT_MS = 30_000
 // A model that sends nothing for this long is given up on: before its
 // first line it counts as busy (try the next model), after it an error.
 // Thinking (planning) takes longer before the first line.
@@ -70,7 +73,14 @@ const idleTimeout = (job: Job) =>
 
 // The model is overloaded or rate-limited. Worth retrying later;
 // not a bug in our code.
-export class BusyError extends Error {}
+export class BusyError extends Error {
+  constructor(
+    message: string,
+    readonly retryAfterMs?: number, // when a rate limit says it resets
+  ) {
+    super(message)
+  }
+}
 
 type Result = { model: string }
 
@@ -92,6 +102,7 @@ export async function* streamLines(
   }
   const attempts = Math.max(MAX_ATTEMPTS, models.length)
   const IDLE_TIMEOUT_MS = idleTimeout(job)
+  let waitedForQuota = false
 
   for (let attempt = 1; ; attempt++) {
     const model = models[(attempt - 1) % models.length]
@@ -126,8 +137,24 @@ export async function* streamLines(
           ? new Error('The AI stopped responding partway. Try again.')
           : new BusyError(`${label} sent nothing`)
       const canRetry = error instanceof BusyError && !yieldedAny
-      if (!canRetry || attempt === attempts || signal.aborted) throw error
-      console.warn(`${label} busy, retrying (attempt ${attempt + 1})`)
+      if (!canRetry || signal.aborted) throw error
+      if (attempt >= attempts) {
+        const wait = error instanceof BusyError ? error.retryAfterMs : 0
+        if (waitedForQuota || !wait || wait > MAX_QUOTA_WAIT_MS) throw error
+        waitedForQuota = true
+        console.warn(
+          `${label} rate-limited → waiting ${Math.ceil(wait / 1000)}s, ` +
+            'then trying it again',
+        )
+        await Bun.sleep(wait)
+        attempt-- // the same model once more
+        continue
+      }
+      const next = models[attempt % models.length]
+      console.warn(
+        `${label} busy → trying ${next.provider}:${next.name} ` +
+          `(attempt ${attempt + 1})`,
+      )
       await Bun.sleep(RETRY_DELAY_MS * 2 ** (attempt - 1))
     } finally {
       clearTimeout(timer)
@@ -193,10 +220,17 @@ async function* streamOnce(
 }
 
 // 429 = rate limited, 500/502/503/529 = provider down or overloaded
-function toError(status: unknown, message: string): Error {
+function toError(status: unknown, body: string): Error {
   const busyStatus = [429, 500, 502, 503, 529].includes(Number(status))
-  const busyText = /overloaded|rate.?limit|temporarily|quota/i.test(message)
+  const busyText = /overloaded|rate.?limit|temporarily|quota/i.test(body)
+  // APIs answer with a JSON body; its "message" is the readable part
+  const message = /"message":\s*"([^"]*)"/.exec(body)?.[1] ?? body
+  // "Please retry in 16.47s" / "retryDelay": "16s"
+  const retry = /retry in ([\d.]+)s|"retryDelay":\s*"([\d.]+)s"/i.exec(body)
+  const retryAfterMs = retry
+    ? Math.ceil(Number(retry[1] ?? retry[2]) * 1000)
+    : undefined
   return busyStatus || busyText
-    ? new BusyError(message)
+    ? new BusyError(`${status}: ${message.split('\\n')[0]}`, retryAfterMs)
     : new Error(`LLM error ${status}: ${message}`)
 }
