@@ -14,4 +14,6 @@ export const illustrationHelp =
   'illustration: a picture drawn in code, used instead of a photo: ' +
   '"blobs" (soft color clouds), "geometric" (shapes), "orbit" (rings ' +
   'and dots), "waves", "grid" (tiles, some lit), "cards" (an abstract ' +
-  'app screen); illustrationIcon puts an icon in its center.'
+  'app screen); illustrationIcon puts an icon in its center; ' +
+  'illustrationMotion "moving" animates it gently (colors drift, rings ' +
+  'turn, waves flow).'

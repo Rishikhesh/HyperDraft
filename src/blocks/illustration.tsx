@@ -2,7 +2,7 @@
 // to download, so nothing can break; colors come from the theme's
 // chart palette, so they follow light and dark mode. The seed (e.g.
 // the title) makes each page's art different but stable.
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Icon } from './icons'
 
@@ -30,11 +30,13 @@ export function Illustration({
   style,
   icon,
   seed,
+  moving,
   className,
 }: {
   style?: IllustrationStyle | null
   icon?: string | null
   seed: string
+  moving?: boolean // gentle, endless motion (see index.css)
   className?: string
 }) {
   const rand = random(seed)
@@ -43,6 +45,16 @@ export function Illustration({
   const offset = Math.floor(rand() * 5)
   const color = (i: number) => colors[(i + offset) % colors.length]
   const between = (min: number, max: number) => min + rand() * (max - min)
+  // Per-shape motion: how far, how long, and a head start. Its own
+  // random sequence, so turning motion on doesn't move the art itself
+  const wiggle = random(`${seed}:motion`)
+  const motion = (dx: number, dy: number, seconds: number) =>
+    ({
+      '--dx': `${dx}px`,
+      '--dy': `${dy}px`,
+      animationDuration: `${seconds}s`,
+      animationDelay: `-${wiggle() * seconds}s`,
+    }) as CSSProperties
   const id = `ill-${seed.replace(/\W/g, '').slice(0, 12)}-${kind}`
 
   let art: ReactNode
@@ -58,6 +70,12 @@ export function Illustration({
           {[0, 1, 2, 3].map((i) => (
             <circle
               key={i}
+              className="sw-drift"
+              style={motion(
+                wiggle() * 120 - 60,
+                wiggle() * 80 - 40,
+                7 + wiggle() * 5,
+              )}
               cx={between(80, 320)}
               cy={between(60, 240)}
               r={between(60, 110)}
@@ -73,33 +91,49 @@ export function Illustration({
       const y = between(20, 250)
       const size = between(24, 90)
       const fill = color(i)
-      const shape = i % 3
-      return shape === 0 ? (
-        <circle key={i} cx={x} cy={y} r={size / 2} fill={fill} opacity="0.8" />
-      ) : shape === 1 ? (
-        <rect
+      const kind = i % 3
+      const shape =
+        kind === 0 ? (
+          <circle cx={x} cy={y} r={size / 2} fill={fill} opacity="0.8" />
+        ) : kind === 1 ? (
+          <rect
+            x={x - size / 2}
+            y={y - size / 2}
+            width={size}
+            height={size}
+            rx="10"
+            fill={fill}
+            opacity="0.75"
+            transform={`rotate(${between(-30, 30)} ${x} ${y})`}
+          />
+        ) : (
+          <polygon
+            points={`${x},${y - size / 2} ${x + size / 2},${y + size / 2} ${x - size / 2},${y + size / 2}`}
+            fill={fill}
+            opacity="0.7"
+          />
+        )
+      // A group, so the float doesn't replace the shape's own rotation
+      return (
+        <g
           key={i}
-          x={x - size / 2}
-          y={y - size / 2}
-          width={size}
-          height={size}
-          rx="10"
-          fill={fill}
-          opacity="0.75"
-          transform={`rotate(${between(-30, 30)} ${x} ${y})`}
-        />
-      ) : (
-        <polygon
-          key={i}
-          points={`${x},${y - size / 2} ${x + size / 2},${y + size / 2} ${x - size / 2},${y + size / 2}`}
-          fill={fill}
-          opacity="0.7"
-        />
+          className="sw-float"
+          style={motion(0, -8 - wiggle() * 8, 4 + wiggle() * 3)}
+        >
+          {shape}
+        </g>
       )
     })
   } else if (kind === 'orbit') {
     art = [50, 85, 120].map((r, ring) => (
-      <g key={ring}>
+      <g
+        key={ring}
+        className="sw-spin"
+        style={{
+          ...motion(0, 0, 40 + ring * 15),
+          animationDirection: ring % 2 ? 'reverse' : 'normal',
+        }}
+      >
         <circle
           cx="200"
           cy="150"
@@ -129,6 +163,8 @@ export function Illustration({
       return (
         <path
           key={i}
+          className="sw-float"
+          style={motion(0, -6 - wiggle() * 8, 5 + wiggle() * 4)}
           d={`M0 ${y} C 100 ${y - a}, 150 ${y + a}, 200 ${y} S 320 ${y - a}, 400 ${y} V300 H0Z`}
           fill={color(i)}
           opacity={0.35 + i * 0.12}
@@ -141,6 +177,8 @@ export function Illustration({
       return (
         <rect
           key={i}
+          className={lit ? 'sw-twinkle' : undefined}
+          style={lit ? motion(0, 0, 2 + wiggle() * 3) : undefined}
           x={24 + (i % 8) * 45}
           y={20 + Math.floor(i / 8) * 45}
           width="36"
@@ -154,29 +192,31 @@ export function Illustration({
   } else {
     // "cards": an abstract app screen, stacked panels and bars
     art = [0, 1, 2].map((i) => (
-      <g key={i} transform={`translate(${60 + i * 34} ${50 + i * 30})`}>
-        <rect
-          width="220"
-          height="150"
-          rx="14"
-          fill="var(--card)"
-          stroke="currentColor"
-          strokeOpacity="0.15"
-        />
-        <rect x="18" y="18" width="70" height="10" rx="5" fill={color(i)} />
-        {[0, 1, 2].map((j) => (
+      <g key={i} className="sw-float" style={motion(0, -6, 5 + i)}>
+        <g transform={`translate(${60 + i * 34} ${50 + i * 30})`}>
           <rect
-            key={j}
-            x="18"
-            y={44 + j * 22}
-            width={between(90, 180)}
-            height="8"
-            rx="4"
-            fill="currentColor"
-            opacity="0.12"
+            width="220"
+            height="150"
+            rx="14"
+            fill="var(--card)"
+            stroke="currentColor"
+            strokeOpacity="0.15"
           />
-        ))}
-        <circle cx="190" cy="120" r="14" fill={color(i + 1)} opacity="0.9" />
+          <rect x="18" y="18" width="70" height="10" rx="5" fill={color(i)} />
+          {[0, 1, 2].map((j) => (
+            <rect
+              key={j}
+              x="18"
+              y={44 + j * 22}
+              width={between(90, 180)}
+              height="8"
+              rx="4"
+              fill="currentColor"
+              opacity="0.12"
+            />
+          ))}
+          <circle cx="190" cy="120" r="14" fill={color(i + 1)} opacity="0.9" />
+        </g>
       </g>
     ))
   }
@@ -192,7 +232,7 @@ export function Illustration({
       <svg
         viewBox="0 0 400 300"
         preserveAspectRatio="xMidYMid slice"
-        className="absolute inset-0 size-full"
+        className={cn('absolute inset-0 size-full', moving && 'sw-art-moving')}
         aria-hidden
       >
         {art}

@@ -250,3 +250,42 @@
 .sw-preview :is(h1, h2, h3, h4, [data-slot='card-title']) {
   font-family: var(--sw-heading-font, inherit);
 }
+
+/* Illustrations with illustrationMotion "moving": gentle, endless.
+   Each shape sets its own --dx/--dy, duration and delay. */
+@keyframes sw-drift {
+  to {
+    transform: translate(var(--dx), var(--dy));
+  }
+}
+@keyframes sw-float {
+  50% {
+    transform: translateY(var(--dy));
+  }
+}
+@keyframes sw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes sw-twinkle {
+  50% {
+    opacity: 0.2;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sw-art-moving .sw-drift {
+    animation: sw-drift 10s ease-in-out infinite alternate;
+  }
+  .sw-art-moving .sw-float {
+    animation: sw-float 5s ease-in-out infinite;
+  }
+  .sw-art-moving .sw-spin {
+    transform-box: view-box;
+    transform-origin: 200px 150px;
+    animation: sw-spin 50s linear infinite;
+  }
+  .sw-art-moving .sw-twinkle {
+    animation: sw-twinkle 3s ease-in-out infinite;
+  }
+}

@@ -153,6 +153,7 @@ export const blockDefinitions = {
       imageAlt: z.string().nullable(),
       illustration: z.enum(illustrationStyles).nullable(),
       illustrationIcon: icon,
+      illustrationMotion: z.enum(['still', 'moving']).nullable(),
       titleEffect: textEffect,
       words,
     }),
@@ -199,6 +200,7 @@ export const blockDefinitions = {
       imageSide: z.enum(['left', 'right']).nullable(),
       illustration: z.enum(illustrationStyles).nullable(),
       illustrationIcon: icon,
+      illustrationMotion: z.enum(['still', 'moving']).nullable(),
       caption: z.string().nullable(),
     }),
     slots: ['default'],
@@ -221,6 +223,7 @@ export const blockDefinitions = {
       url: z.string().nullable(),
       illustration: z.enum(illustrationStyles).nullable(),
       illustrationIcon: icon,
+      illustrationMotion: z.enum(['still', 'moving']).nullable(),
     }),
     description:
       'A product screenshot inside a browser window ("browser", with url ' +

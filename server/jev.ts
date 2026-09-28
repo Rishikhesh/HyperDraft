@@ -387,7 +387,12 @@ function optionQuestions(
 // A selected part only changes its own options: with the picture
 // selected, "make this orbit" must not also re-layout the whole Hero
 const PART_OPTIONS: Record<string, string[]> = {
-  image: ['illustration', 'illustrationIcon', 'imageSide'],
+  image: [
+    'illustration',
+    'illustrationIcon',
+    'illustrationMotion',
+    'imageSide',
+  ],
   title: ['titleEffect', 'words'],
 }
 function partOptions(prop: string | null): string[] | null {

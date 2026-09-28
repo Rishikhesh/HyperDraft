@@ -45,6 +45,7 @@ export function DeviceFrame({ props }: PropsOf<'DeviceFrame'>) {
   const screen = (
     <Illustration
       style={props.illustration ?? 'cards'}
+      moving={props.illustrationMotion === 'moving'}
       icon={props.illustrationIcon}
       seed={props.url ?? 'app'}
       className="size-full"

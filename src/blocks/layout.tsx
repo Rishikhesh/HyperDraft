@@ -280,6 +280,7 @@ export function Hero({ props, children }: PropsOf<'Hero'>) {
           {/* A drawn illustration, with the photo on top if there is one */}
           <Illustration
             style={props.illustration}
+            moving={props.illustrationMotion === 'moving'}
             icon={props.illustrationIcon}
             seed={props.title}
             className="absolute inset-0"
@@ -309,6 +310,7 @@ export function Hero({ props, children }: PropsOf<'Hero'>) {
         <div data-sw-prop="image" className="absolute inset-0 -z-10">
           <Illustration
             style={props.illustration}
+            moving={props.illustrationMotion === 'moving'}
             icon={null}
             seed={props.title}
             className="absolute inset-0"
@@ -436,6 +438,7 @@ export function Split({ props, children }: PropsOf<'Split'>) {
       >
         <Illustration
           style={props.illustration}
+          moving={props.illustrationMotion === 'moving'}
           icon={props.illustrationIcon}
           seed={props.caption ?? props.imageAlt ?? 'split'}
           className="absolute inset-0"
