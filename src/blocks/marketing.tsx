@@ -26,13 +26,15 @@ type PropsOf<K extends keyof Defs> = BaseComponentProps<
 >
 
 // Card hover effects (the blocks' "hover" option)
+// Hover feedback is quick and eases out: a response, not a show
 const hoverEffects = {
   none: '',
   lift:
-    'transition duration-300 hover:shadow-lg ' +
+    'transition duration-200 ease-out hover:shadow-lg ' +
     'motion-safe:hover:-translate-y-1',
   glow:
-    'transition duration-300 hover:shadow-lg hover:shadow-primary/10 ' +
+    'transition duration-200 ease-out hover:shadow-lg ' +
+    'hover:shadow-primary/10 ' +
     'hover:ring-2 hover:ring-primary/40',
 }
 const hoverOf = (value: keyof typeof hoverEffects | null | undefined) =>

@@ -30,5 +30,8 @@ export type ElementSelected = {
   prop: string | null // the clicked part of it, if the block marks one
 }
 
+// preview → app: "put this example prompt in the chat box"
+export type PromptSuggested = { type: 'suggest'; text: string }
+
 // Everything the preview can send, so the app can handle them in one place
-export type PreviewMessage = PreviewReady | ElementSelected
+export type PreviewMessage = PreviewReady | ElementSelected | PromptSuggested

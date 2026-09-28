@@ -3,11 +3,36 @@
 import { defineCatalog } from '@json-render/core'
 import { schema } from '@json-render/react/schema'
 import { shadcnComponentDefinitions } from '@json-render/shadcn/catalog'
+import { mapValues } from 'lodash-es'
+import { z } from 'zod'
 import { blockDefinitions } from './blocks/definitions' // relative: the server imports this too
+
+// json-render's components, each also taking Tailwind classes. Many
+// lack a className, so a request like "make this wider" had nothing to
+// change. (The registry applies it; see withClassName.)
+const shadcnWithClass = mapValues(shadcnComponentDefinitions, (definition) =>
+  'className' in definition.props.shape
+    ? definition
+    : {
+        ...definition,
+        props: definition.props.extend({ className: z.string().nullable() }),
+      },
+) as typeof shadcnComponentDefinitions
+
+// Components json-render draws without a className of their own
+export const addedClassName = Object.keys(shadcnComponentDefinitions).filter(
+  (name) =>
+    !(
+      'className' in
+      shadcnComponentDefinitions[
+        name as keyof typeof shadcnComponentDefinitions
+      ].props.shape
+    ),
+)
 
 // json-render's shadcn components + our page-level blocks
 export const componentDefinitions = {
-  ...shadcnComponentDefinitions,
+  ...shadcnWithClass,
   ...blockDefinitions,
 }
 

@@ -37,6 +37,8 @@ export async function buildPage(
   history: string[],
   scope: Scope,
   components: ComponentName[], // Jev's picks, for a focused request
+  product: string | null, // Jev's kind of product: palette and notes
+  dials: Record<string, string>, // Jev's variance, motion, density
   send: Send,
   signal: AbortSignal,
   elapsed: () => number,
@@ -90,22 +92,39 @@ export async function buildPage(
   if (scope === 'focused') {
     // One focused thing (a login form, a pricing table) needs no plan:
     // the request is the section's job; Jev picks the page's look
-    head.page = { align: 'center' }
+    head.page = {
+      align: 'center',
+      ...dials,
+      ...(product && { palette: product }),
+    }
     pageOptions = decidePage(message).catch(() => null)
     addSection({ id: 'main', job: message, uses: components })
   } else {
     // A whole page is planned; sections start while planning goes on
     send({ kind: 'step', text: 'Planning the page…' })
-    const plan = await planPage(message, history, scope, signal, {
-      onHead: ({ direction, page }) => {
-        head.direction = direction
-        // Several sections stack from the top; centering is for one
-        head.page = { ...page, align: 'top' }
-        send({ kind: 'narration', text: direction })
-        send({ kind: 'step', text: 'Building sections as they are planned…' })
+    const plan = await planPage(
+      message,
+      history,
+      scope,
+      signal,
+      {
+        onHead: ({ direction, page }) => {
+          head.direction = direction
+          // Several sections stack from the top; centering is for one
+          head.page = {
+            ...page,
+            ...dials,
+            align: 'top',
+            ...(product && { palette: product }),
+          }
+          send({ kind: 'narration', text: direction })
+          send({ kind: 'step', text: 'Building sections as they are planned…' })
+        },
+        onSection: addSection,
       },
-      onSection: addSection,
-    }).finally(() => queue.close()) // no builder waits for more
+      product,
+      dials,
+    ).finally(() => queue.close()) // no builder waits for more
     planModel = plan.model
   }
   queue.close()
@@ -114,6 +133,7 @@ export async function buildPage(
   if (!sections.some((section) => changes.has(section.id))) {
     throw new Error('No section could be built. Try again.')
   }
+  frameInAppShell(changes)
   // Page options that arrived after the page was created
   const picked = { ...head.page, ...(await pageOptions) }
   propPatches('page', picked).forEach(changes.apply)
@@ -133,7 +153,7 @@ export async function buildPage(
 // are renamed ("system-overview-overview-card"), children included.
 async function buildSection(
   section: Section,
-  head: Pick<Plan, 'direction'>,
+  head: Pick<Plan, 'direction' | 'page'>,
   message: string,
   changes: ReturnType<typeof tracker>,
   signal: AbortSignal,
@@ -142,10 +162,12 @@ async function buildSection(
     (name) => name !== 'Page',
   ) as ComponentName[]
   // Jev picks the planned blocks' layouts (sampled, for variety)
+  const variance = head.page.variance ?? 'medium'
   const layouts = await decideLayouts(
     section.job,
     head.direction,
     section.uses,
+    variance,
   ).catch(() => ({}))
   const layoutNote = Object.entries(layouts)
     .map(([type, layout]) => `${type} with layout "${layout}"`)
@@ -201,6 +223,35 @@ async function buildSection(
     }
   }
   return model
+}
+
+// A sidebar layout (AppShell) frames an app screen: its main area holds
+// the content. Sections are built side by side, so the other sections
+// would sit below a full-screen, empty shell. Move them into it.
+function frameInAppShell(changes: ReturnType<typeof tracker>) {
+  const top = changes.childrenOf('page')
+  // The shell is a section itself, or the only thing inside one
+  const shell = top
+    .map((id) => {
+      if (changes.typeOf(id) === 'AppShell') return { section: id, shell: id }
+      const [only, ...rest] = changes.childrenOf(id)
+      return only && !rest.length && changes.typeOf(only) === 'AppShell'
+        ? { section: id, shell: only }
+        : null
+    })
+    .find(Boolean)
+  if (!shell) return
+  const others = top.filter((id) => id !== shell.section)
+  changes.apply({
+    op: 'replace',
+    path: `/elements/${shell.shell}/children`,
+    value: [...changes.childrenOf(shell.shell), ...others],
+  })
+  changes.apply({
+    op: 'replace',
+    path: '/elements/page/children',
+    value: [shell.shell],
+  })
 }
 
 // Children lists refer to elements by id, so rename those too: in a

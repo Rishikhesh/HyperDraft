@@ -6,6 +6,7 @@ import { componentDefinitions, componentNames } from '../src/catalog'
 import type { Scope } from './jev'
 import { streamLines } from './llm'
 import { optionProps } from './edit'
+import { products } from './products'
 
 export type Section = {
   id: string // becomes the section's element id
@@ -27,7 +28,9 @@ const menu = componentNames
   })
   .join('\n')
 
+// Jev sets the dials; the planner is told them instead
 const pageOptions = Object.entries(optionProps('Page'))
+  .filter(([prop]) => !['variance', 'motion', 'density'].includes(prop))
   .map(([prop, values]) => `${prop}: ${values.join(' | ')}`)
   .join('; ')
 
@@ -42,9 +45,12 @@ Reply with ONLY a JSON object, no markdown:
 }
 
 Think about what THIS product or request needs, then design for it:
-- No default template. Don't reach for the usual navbar, hero, logos, features, testimonials, pricing, FAQ, CTA, footer sequence unless each part earns its place here. Vary the structure: open with a demo, a bold statement, a live feed, a split layout, a single form; whatever fits.
+- Build with the designed blocks (Hero, FeatureGrid, Stats, Testimonials, PricingTable, Steps, CallToAction, Carousel, Marquee, Chart, AppShell, the showcase blocks…): they look finished. Vary a page through their layouts, content and effects, and through which sections it has and their order. Basic pieces (Stack, Text, List, Input) are for what no block covers, not a replacement for blocks.
+- A landing page or site opens with a strong first screen: a Hero (centered, split or background) or a Split, with a clear headline and a call to action. Include only the sections that serve this product, in a fitting order.
 - The direction should feel specific to this subject, not generic "clean and modern". Before choosing, weigh a few genuinely different directions (light or dark, calm or loud, dense or airy, playful or serious) and pick what fits this subject best, not your usual default.
 - Page effects are optional. Many subjects want a plain or muted page with no texture or glass; use effects only when they serve the mood.
+- Avoid what makes pages look AI-made: placeholder names (Acme, Nexus), filler verbs (Elevate, Seamless, Unleash), perfect numbers (99.99%), generic people (John Doe), and version or numbered eyebrows.
+- An app screen with a sidebar (dashboard, admin, settings): make AppShell the first section; the sections after it become its main area, so plan them as the screen's content.
 - A focused request (a login form, a pricing table, a chart) is one or two sections: build that one thing fully, nothing around it.
 - A whole site or landing page: 3 to 8 sections, in the order a visitor should meet them.
 - "uses" lists components from this menu (exact names):
@@ -65,6 +71,8 @@ export async function planPage(
   scope: Scope,
   signal: AbortSignal,
   events: PlanEvents,
+  product: string | null, // the kind of product, when Jev knows it
+  dials: Record<string, string>,
 ): Promise<Plan & { model: string }> {
   const earlier = history.length
     ? `Earlier in this conversation the user asked:\n${history.map((h) => `- ${h}`).join('\n')}\n\n`
@@ -73,13 +81,22 @@ export async function planPage(
     scope === 'focused'
       ? 'This is a focused request: one or two sections.'
       : 'This is a whole page.'
+  // Design notes for this kind of product: guidance, not a template
+  const about = product && products[product]
+  const reference = about
+    ? `\n\nDesign notes for a ${about.type} (a reference, not a rule): ` +
+      `style ${about.style}. ${about.notes} The brand colors are already ` +
+      `set for it (${about.colors}); write the direction to suit them.`
+    : ''
   // A reply that gives no usable section gets one more try
   for (let attempt = 1; ; attempt++) {
     const reader = planReader(events)
     const lines = streamLines(
       'plan',
       system,
-      `${earlier}Request: ${message}\n\n${size}`,
+      `${earlier}Request: ${message}\n\n${size}${reference}\n\n` +
+        `Dials already set for this page: layout variance ${dials.variance}, ` +
+        `motion ${dials.motion}, density ${dials.density}. Plan to fit them.`,
       signal,
     )
     let next = await lines.next()

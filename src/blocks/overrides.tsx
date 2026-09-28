@@ -42,6 +42,7 @@ const buttonSizes = { sm: 'sm', md: 'default', lg: 'lg' } as const
 // All shadcn variants and sizes, plus Magic UI effect buttons
 export function Button({ props, emit }: PropsOf<'Button'>) {
   const common = {
+    className: props.className ?? undefined,
     disabled: props.disabled ?? false,
     onClick: () => {
       emit('press')
@@ -104,11 +105,30 @@ const headingSizes = {
   h4: 'text-sm font-semibold',
 }
 
+const textVariants = {
+  body: 'text-sm',
+  caption: 'text-xs',
+  muted: 'text-sm text-muted-foreground',
+  lead: 'text-xl text-muted-foreground',
+  code: 'rounded bg-muted px-1.5 py-0.5 font-mono text-sm',
+}
+
+// The original Text, plus classes (so "make it bigger" can work)
+export function Text({ props }: PropsOf<'Text'>) {
+  const variant = props.variant ?? 'body'
+  const Tag = variant === 'code' ? 'code' : 'p'
+  return (
+    <Tag className={cn(textVariants[variant], 'text-left', props.className)}>
+      {props.text}
+    </Tag>
+  )
+}
+
 // The original Heading, plus title effects
 export function Heading({ props }: PropsOf<'Heading'>) {
   const Tag = props.level ?? 'h2'
   return (
-    <Tag className={cn(headingSizes[Tag], 'text-left')}>
+    <Tag className={cn(headingSizes[Tag], 'text-left', props.className)}>
       <TextEffect text={props.text} effect={props.effect} words={props.words} />
     </Tag>
   )

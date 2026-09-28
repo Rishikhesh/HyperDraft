@@ -54,6 +54,12 @@ export function tracker(
     has(id: string) {
       return Boolean(working.elements[id])
     },
+    typeOf(id: string): string | undefined {
+      return working.elements[id]?.type
+    },
+    prop(id: string, name: string): unknown {
+      return get(working.elements, [id, 'props', name])
+    },
     childrenOf(id: string): string[] {
       return working.elements[id]?.children ?? []
     },
@@ -101,6 +107,9 @@ export function tracker(
 // Reads LLM output line by line: patches go to `onPatch`, broken patch
 // lines are counted, words around them go to `onWords`. Returns which
 // model answered.
+// More lines than any real UI needs (the biggest pages are ~70 elements)
+const MAX_LINES = 800
+
 export async function applyStream(
   lines: AsyncGenerator<string, { model: string }>,
   onPatch: (patch: JsonPatch) => void,
@@ -123,9 +132,28 @@ export async function applyStream(
     pending = ''
   }
 
+  // A model can get stuck writing the same lines forever; it never goes
+  // quiet, so the silence timeout doesn't catch it. Stop reading when a
+  // line repeats, or after far more lines than any real UI needs.
+  const seen = new Map<string, number>()
+  let count = 0
+  const stuck = (text: string) => {
+    if (++count > MAX_LINES) return true
+    if (text.length < 20) return false // short lines repeat naturally
+    const times = (seen.get(text) ?? 0) + 1
+    seen.set(text, times)
+    return times >= 3
+  }
+
   let next = await lines.next()
   for (; !next.done; next = await lines.next()) {
     const text = next.value.trim()
+    if (stuck(text)) {
+      console.warn('model stuck repeating; stopped after', count, 'lines')
+      if (pending) giveUp()
+      await lines.return({ model: '' }) // closes the model's stream
+      return 'a model that got stuck (stopped)'
+    }
     if (pending) {
       const joined = read(pending + text)
       if (joined) {

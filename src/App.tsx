@@ -80,6 +80,9 @@ export default function App() {
     id: string
     prop: string | null // a part of it: "title", "plans.1"
   } | null>(null)
+  const [prefill, setPrefill] = useState<{ text: string; key: number } | null>(
+    null,
+  )
   const select = (id: string | null, prop: string | null = null) =>
     setClicked(id ? { id, prop } : null)
   const selectedId = clicked && spec.elements[clicked.id] ? clicked.id : null
@@ -339,6 +342,13 @@ export default function App() {
       if (event.data?.type === 'select') {
         select(event.data.id, event.data.prop ?? null)
       }
+      // An example prompt picked in the empty preview
+      if (
+        event.data?.type === 'suggest' &&
+        typeof event.data.text === 'string'
+      ) {
+        setPrefill({ text: event.data.text, key: Date.now() })
+      }
     }
     window.addEventListener('message', onMessage)
 
@@ -353,6 +363,7 @@ export default function App() {
     <div className="flex h-dvh flex-col-reverse md:grid
       md:grid-cols-[360px_1fr]">
       <ChatPanel
+        prefill={prefill}
         messages={messages}
         busy={busy}
         selection={

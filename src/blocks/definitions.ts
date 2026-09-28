@@ -65,6 +65,7 @@ export const blockDefinitions = {
         .enum(['none', 'shimmer', 'rainbow', 'pulse', 'shiny', 'arrow'])
         .nullable(),
       disabled: z.boolean().nullable(),
+      className: z.string().nullable(),
       toast: z.string().nullable(),
     }),
     description:
@@ -83,8 +84,16 @@ export const blockDefinitions = {
   },
   Heading: {
     ...shadcn.Heading,
-    props: shadcn.Heading.props.extend({ effect: textEffect, words }),
+    props: shadcn.Heading.props.extend({
+      effect: textEffect,
+      words,
+      className: z.string().nullable(),
+    }),
     description: shadcn.Heading.description + '.' + textEffectHelp,
+  },
+  Text: {
+    ...shadcn.Text,
+    props: shadcn.Text.props.extend({ className: z.string().nullable() }),
   },
 
   Page: {
@@ -110,6 +119,12 @@ export const blockDefinitions = {
         ])
         .nullable(),
       texture: z.enum(['none', 'noise']).nullable(),
+      palette: z.string().nullable(),
+      // The three dials (from taste-skill): how unusual, how animated,
+      // how packed the page is
+      variance: z.enum(['low', 'medium', 'high']).nullable(),
+      motion: z.enum(['still', 'subtle', 'lively']).nullable(),
+      density: z.enum(['airy', 'balanced', 'compact']).nullable(),
       font: z.enum(fontNames).nullable(),
       headingFont: z.enum(fontNames).nullable(),
       align: z.enum(['top', 'center']).nullable(),
@@ -127,6 +142,11 @@ export const blockDefinitions = {
       'above). texture "noise" adds a film-grain feel. ' +
       'align "center" centers its content (auth pages, ' +
       'simple forms); "top" stacks Navbar, Hero, Sections, Footer. ' +
+      'palette: the brand colors, chosen by the app; keep its value. ' +
+      'variance: how unusual the layout is (low: calm and symmetric; ' +
+      'high: bold, asymmetric). motion: still (no automatic animation), ' +
+      'subtle, lively. density: airy (lots of space), balanced, compact ' +
+      '(packed, dashboard-like). ' +
       'font sets the text, headingFont the titles (pair a display or ' +
       `serif heading with a plain text font): ${fontHelp}. ` +
       'surface "glass" turns every card on the page into frosted, ' +

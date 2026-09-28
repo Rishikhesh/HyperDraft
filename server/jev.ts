@@ -19,6 +19,7 @@ import {
 } from '../src/catalog'
 import { outline, targetOptions } from './describe'
 import { optionProps } from './edit'
+import { products } from './products'
 
 const client = new TypeSafeClient() // reads TYPESAFE_API_KEY from .env
 
@@ -38,6 +39,17 @@ export const editKinds = {
 }
 
 export type Scope = 'focused' | 'full'
+
+// Product types to choose from: "SaaS (General): app, b2b, cloud…"
+const productOptions: Record<string, string> = {
+  none: 'Not about a kind of product or its colors',
+  ...Object.fromEntries(
+    toPairs(products).map(([id, product]) => [
+      id,
+      `${product.type}: ${product.keywords.slice(0, 70)}`,
+    ]),
+  ),
+}
 
 // What kind of page a request is about (shown in the chat)
 export const pageTypes = {
@@ -117,6 +129,12 @@ export type Decision = {
     // The target and close runner-ups ("the pricing and feature cards")
     scope: string[]
   } | null
+  // The kind of product (a key of products): gives a new page its
+  // palette and the planner its notes; on a page-wide style edit, the
+  // palette the request asks for ("warmer", "like a bank"). null: none
+  product: string | null
+  // A new page's dials (taste-skill): variance, motion, density
+  dials: Record<'variance' | 'motion' | 'density', string>
   // Option values Jev already picked in the same call, for the likely
   // targets (the selected element and the page): id → changed props,
   // or null when no listed value fits ("other")
@@ -226,6 +244,32 @@ export async function decide(
         },
       ),
       pageType: choice('What kind of page does `request` describe?', pageTypes),
+      // The dials for a new page, from how the request reads
+      variance: choice('How unusual should the layout of `request` be?', {
+        low: 'Calm, symmetric, predictable: trust-first, public service, banking, docs',
+        medium: 'Some variety: most products, apps, SaaS',
+        high: 'Bold, asymmetric, unexpected: agencies, creative, fashion, launches',
+      }),
+      motion: choice('How much should the page for `request` move?', {
+        still:
+          'Nothing moves by itself: official, regulated, accessibility-first',
+        subtle: 'Gentle entrances and hovers: most sites',
+        lively: 'Rich motion: playful, creative, launches, games',
+      }),
+      density: choice('How packed should the page for `request` be?', {
+        airy: 'Lots of space, few things per screen: luxury, portfolio, editorial',
+        balanced: 'Standard spacing: most sites',
+        compact: 'Packed: dashboards, admin, data tools',
+      }),
+      // New page: what it is for. Existing page: the look asked for
+      product: choice(
+        isEmpty
+          ? 'Which kind of product is `request` about? "none" if unclear.'
+          : 'Does `request` ask for a different color scheme or overall ' +
+              'feel ("warmer", "like a luxury brand")? Then whose colors ' +
+              'fit that look? Otherwise "none".',
+        productOptions,
+      ),
       scope: choice('How much does `request` ask to build?', {
         focused:
           'One specific thing, shown on its own: a pricing page, a login ' +
@@ -306,7 +350,21 @@ export async function decide(
             ),
       }
 
-  return { intent, pageType, scope, components, edit, options }
+  const product = String(answers.product.choice)
+  return {
+    intent,
+    pageType,
+    scope,
+    components,
+    edit,
+    options,
+    product: product === 'none' ? null : product,
+    dials: {
+      variance: String(answers.variance.choice),
+      motion: String(answers.motion.choice),
+      density: String(answers.density.choice),
+    },
+  }
 }
 
 // For "style" edits: Jev picks the new value of each option the element
@@ -485,6 +543,7 @@ export async function decideLayouts(
   job: string,
   direction: string,
   types: string[],
+  variance = 'medium', // low: calm, symmetric; high: bold, asymmetric
 ): Promise<Record<string, string>> {
   const withLayouts = types.filter((type) => optionProps(type).layout)
   if (!withLayouts.length) return {}
@@ -492,6 +551,12 @@ export async function decideLayouts(
     state: {
       section: job,
       design_direction: direction || 'none given',
+      layout_variance:
+        variance === 'low'
+          ? 'low: prefer calm, centered, symmetric layouts'
+          : variance === 'high'
+            ? 'high: prefer bold, asymmetric, unexpected layouts'
+            : 'medium',
       option_help: optionHelp(
         withLayouts.map((type) => ({ type, props: {}, children: [] })),
       ),
@@ -500,8 +565,8 @@ export async function decideLayouts(
       withLayouts.map((type) => [
         type,
         choice(
-          `Which "layout" of ${type} suits \`section\` best? ` +
-            '`option_help` explains the layouts.',
+          `Which "layout" of ${type} suits \`section\` and ` +
+            '`layout_variance` best? `option_help` explains the layouts.',
           Object.fromEntries(
             optionProps(type).layout.map((value) => [value, null]),
           ),

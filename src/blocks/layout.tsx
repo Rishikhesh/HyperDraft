@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { BaseComponentProps } from '@json-render/react'
 import { MenuIcon, XIcon } from 'lucide-react'
+import { MotionConfig } from 'motion/react'
 import type { z } from 'zod'
 import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern'
 import { BlurFade } from '@/components/ui/blur-fade'
@@ -20,6 +21,7 @@ import { StripedPattern } from '@/components/ui/striped-pattern'
 import { cn } from '@/lib/utils'
 import type { blockDefinitions } from './definitions'
 import { fontUrl, type FontName } from './fonts'
+import { palettes } from './palettes'
 import { TextEffect } from './effects'
 import { Illustration } from './illustration'
 import { list } from './safe'
@@ -34,8 +36,8 @@ const pageBackgrounds = {
   muted: 'bg-muted/50',
   // Low-opacity tints over the theme background: fine in light and dark
   gradient:
-    'bg-background bg-linear-to-br from-indigo-500/20 via-transparent ' +
-    'to-fuchsia-500/20',
+    'bg-background bg-linear-to-br from-chart-1/20 via-transparent ' +
+    'to-chart-2/20',
   aurora: 'bg-background',
   grid:
     'bg-background bg-[linear-gradient(to_right,var(--border)_1px,' +
@@ -105,7 +107,18 @@ export function Page({ props, children }: PropsOf<'Page'>) {
   useFont(props.font)
   useFont(props.headingFont)
   // Text uses font; titles (h1-h4) use headingFont, see index.css
+  // The palette recolors the brand parts of the theme for this page:
+  // buttons, focus rings, charts, illustrations and color backgrounds
+  const palette = props.palette ? palettes[props.palette] : undefined
   const fontStyle = {
+    ...(palette && {
+      '--primary': palette.primary,
+      '--primary-foreground': palette.onPrimary,
+      '--ring': palette.ring,
+      '--chart-1': palette.primary,
+      '--chart-2': palette.accent,
+      '--chart-3': palette.secondary,
+    }),
     ...(props.font && { fontFamily: family(props.font) }),
     ...(props.headingFont && {
       '--sw-heading-font': family(props.headingFont),
@@ -120,6 +133,9 @@ export function Page({ props, children }: PropsOf<'Page'>) {
         pageBackgrounds[background],
         props.align === 'center' && 'items-center justify-center p-6',
         props.surface === 'glass' && 'sw-glass',
+        // Dials: spacing between sections, and no automatic animation
+        props.density && `sw-density-${props.density}`,
+        props.motion === 'still' && 'sw-still',
         props.className,
       )}
     >
@@ -128,15 +144,15 @@ export function Page({ props, children }: PropsOf<'Page'>) {
         <div aria-hidden className="absolute inset-0 -z-10">
           <div
             className="absolute -top-32 -left-32 size-96 rounded-full
-              bg-indigo-500/30 blur-3xl"
+              bg-chart-1/30 blur-3xl"
           />
           <div
             className="absolute top-1/3 -right-32 size-96 rounded-full
-              bg-fuchsia-500/25 blur-3xl"
+              bg-chart-2/25 blur-3xl"
           />
           <div
             className="absolute -bottom-32 left-1/3 size-96 rounded-full
-              bg-sky-500/20 blur-3xl"
+              bg-chart-3/20 blur-3xl"
           />
         </div>
       )}
@@ -154,7 +170,13 @@ export function Page({ props, children }: PropsOf<'Page'>) {
           <NoiseTexture noiseOpacity={0.4} />
         </div>
       )}
-      {children}
+      {/* motion "still" also stops JS animations (Motion library);
+          otherwise they follow the device's reduced-motion setting */}
+      <MotionConfig
+        reducedMotion={props.motion === 'still' ? 'always' : 'user'}
+      >
+        {children}
+      </MotionConfig>
     </div>
   )
 }
@@ -224,7 +246,9 @@ export function Hero({ props, children }: PropsOf<'Hero'>) {
   const text = (
     <div
       className={cn(
-        'flex flex-col gap-6',
+        // min-w-0: in the split layout's grid, wide content (a terminal
+        // line) must not push into the picture's column
+        'flex min-w-0 flex-col gap-6',
         centered ? 'items-center text-center' : 'items-start',
       )}
     >
@@ -351,7 +375,7 @@ export function Section({ props, children }: PropsOf<'Section'>) {
   return (
     <section
       className={cn(
-        'w-full py-16',
+        'w-full py-(--sw-section-y,4rem)',
         props.background === 'muted' && 'bg-muted',
         props.className,
       )}
@@ -425,7 +449,8 @@ export function Split({ props, children }: PropsOf<'Split'>) {
   return (
     <div
       className={cn(
-        'grid min-h-dvh w-full grid-cols-1 md:grid-cols-2',
+        // Tall, but not a whole screen of one picture in a long page
+        'grid min-h-[min(100dvh,40rem)] w-full grid-cols-1 md:grid-cols-2',
         props.className,
       )}
     >
@@ -461,7 +486,7 @@ export function Split({ props, children }: PropsOf<'Split'>) {
           </p>
         )}
       </div>
-      <div className="flex items-center justify-center p-6 md:p-12">
+      <div className="flex min-w-0 items-center justify-center p-6 md:p-12">
         {/* Children fill the width; a narrower one (a small Card) is
             centered instead of sticking to the left */}
         <div

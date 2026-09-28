@@ -19,8 +19,24 @@ export const sectionRules = [
     'like one page.',
 ]
 
+// Things that make a page look AI-generated. Adapted from taste-skill
+// (MIT, github.com/leonxlnx/taste-skill), "AI tells".
+export const antiSlopRules = [
+  'Invent a real-sounding, specific name for the product or company; ' +
+    'never Acme, Nexus, SmartFlow, Cloudly or similar placeholders.',
+  'Write concrete copy: say what it does. Avoid filler like Elevate, ' +
+    'Seamless, Unleash, Unlock, Supercharge, Next-gen, Revolutionize.',
+  'Use believable, specific numbers (47.2%, 1,284 teams, 4.8/5), not ' +
+    'round or perfect ones (99.99%, 50%, 10,000+).',
+  'Give people specific, locale-fitting names and roles; never John ' +
+    'Doe, Jane Smith or Sarah Chen.',
+  'Eyebrows name the topic in plain words; no version labels (BETA, ' +
+    'v2.0), no numbering (01 / Features), no "Brand · No. 01".',
+]
+
 // For everything
 export const designRules = [
+  ...antiSlopRules,
   'Include everything the request names.',
   'Build exactly what is asked for, polished and complete in itself, ' +
     'but do not add parts nobody asked for. Write realistic copy ' +
@@ -77,11 +93,19 @@ export const designRules = [
     'effects per page beat many competing ones.',
   'Motion is welcome but subtle. Card-based blocks take hover "lift" or ' +
     '"glow". In className you may use: ' +
-    '"motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-700" ' +
-    '(entrance; add delay-150, delay-300 to stagger), "transition ' +
-    'hover:-translate-y-1 hover:shadow-lg" (hover), animate-pulse for a ' +
-    'live badge. Always prefix movement with motion-safe:. Never ' +
-    'animate-bounce or animate-spin on content.',
+    '"motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-500 ' +
+    'ease-out" (entrance; stagger lists with delay-75, delay-150), ' +
+    '"transition duration-200 ease-out hover:-translate-y-1 ' +
+    'hover:shadow-lg" (hover), animate-pulse for a live badge. Always ' +
+    'prefix movement with motion-safe:. Never animate-bounce or ' +
+    'animate-spin on content.',
+  // Motion craft, adapted from Emil Kowalski's skills (MIT,
+  // github.com/emilkowalski/skills)
+  'Motion craft: things entering ease-out, never ease-in; hover and ' +
+    'press feedback 150-300ms, entrances up to 500ms; animate only ' +
+    'transform and opacity (not width, height or margins); grow from ' +
+    'scale-95, never from 0; motion should explain a change, not ' +
+    'decorate every element.',
 
   // Edits
   'When editing, keep the existing look and change only what was asked.',

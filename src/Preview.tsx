@@ -4,14 +4,21 @@ import { markDevtoolsActive } from '@json-render/core'
 import { get, isPlainObject } from 'lodash-es'
 import { JSONUIProvider, Renderer } from '@json-render/react'
 import { Toaster } from '@/components/ui/sonner'
+import EmptyState from '@/EmptyState'
 import ErrorBoundary from '@/ErrorBoundary'
-import type { ElementSelected, PreviewReady, Render } from '@/messages'
+import type {
+  ElementSelected,
+  PreviewReady,
+  PromptSuggested,
+  Render,
+} from '@/messages'
 import { registry } from '@/registry'
 
 export default function Preview() {
   // The last "render" message from the app. null until the first one.
   const [view, setView] = useState<Render | null>(null)
-  const isEditing = view?.mode === 'edit'
+  // Nothing to select until there is a UI (the empty state has buttons)
+  const isEditing = view?.mode === 'edit' && Boolean(view.spec.root)
 
   // Makes the Renderer wrap every element in <span data-jr-key="its-id">.
   // Returns an "off" function, which React calls when Preview unmounts.
@@ -74,6 +81,11 @@ export default function Preview() {
     <div
       className="sw-preview min-h-dvh" // sw-preview: animate new elements
       onClickCapture={selectOnClick}
+      // An image that fails to load (an invented URL) disappears instead
+      // of showing a broken icon and its alt text
+      onErrorCapture={(event) => {
+        if (event.target instanceof HTMLImageElement) event.target.hidden = true
+      }}
       // Menus and dialogs open on pointer-down, not click, so block it too
       onPointerDownCapture={blockInEditMode}
     >
@@ -101,9 +113,12 @@ export default function Preview() {
       ) : view?.busy ? (
         <Skeleton />
       ) : (
-        <p className="pt-24 text-center text-sm text-muted-foreground">
-          Your UI will appear here.
-        </p>
+        <EmptyState
+          onPick={(text) => {
+            const message: PromptSuggested = { type: 'suggest', text }
+            window.parent.postMessage(message, location.origin)
+          }}
+        />
       )}
     </div>
   )

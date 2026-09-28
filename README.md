@@ -98,3 +98,17 @@ preview ◄─ patches stream in and animate; chat shows each step live
 
 The LLM runs on your own free Google AI Studio and NVIDIA quotas, trying the
 models in `LLM_MODELS` in order. Jev answers greetings without using the LLM.
+
+## Credits
+
+Design knowledge adapted from these MIT-licensed projects:
+
+- [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill):
+  color palettes and design notes per product type (`src/blocks/palettes.ts`,
+  `server/products.ts`)
+- [taste-skill](https://github.com/leonxlnx/taste-skill): the three dials
+  (variance, motion, density) and the anti-slop rules
+- [Emil Kowalski's skills](https://github.com/emilkowalski/skills): motion craft
+  rules
+- [Magic UI](https://magicui.design) and [shadcn/ui](https://ui.shadcn.com):
+  components

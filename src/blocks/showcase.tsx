@@ -76,7 +76,7 @@ export function Terminal({ props }: PropsOf<'Terminal'>) {
         line.kind === 'command' ? (
           <TypingAnimation
             key={index}
-          >{`$ ${text(line.text)}`}</TypingAnimation>
+          >{`$ ${text(line.text).replace(/^\s*\$\s*/, '')}`}</TypingAnimation>
         ) : (
           <AnimatedSpan
             key={index}

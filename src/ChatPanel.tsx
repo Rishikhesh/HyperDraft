@@ -43,6 +43,9 @@ type Props = {
   mode: RequestMode
   onModeChange: (mode: RequestMode) => void
   hasUI: boolean // "modify" needs something to modify
+  // An example prompt picked in the preview: put it in the box (the key
+  // changes every pick, so the same prompt can be picked twice)
+  prefill: { text: string; key: number } | null
 }
 
 const placeholders: Record<RequestMode, string> = {
@@ -63,8 +66,15 @@ export default function ChatPanel({
   mode,
   onModeChange,
   hasUI,
+  prefill,
 }: Props) {
   const [draft, setDraft] = useState('')
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    if (!prefill) return
+    setDraft(prefill.text) // eslint-disable-line react/set-state-in-effect -- an outside event, not derived state
+    inputRef.current?.focus()
+  }, [prefill])
   const endRef = useRef<HTMLDivElement>(null)
 
   // Keep the newest message in view
@@ -92,6 +102,19 @@ export default function ChatPanel({
       className="flex h-[45dvh] min-h-0 flex-col gap-2 border-t p-4 md:h-auto
         md:border-t-0 md:border-r"
     >
+      {/* Name, and a reminder that it's still early */}
+      <header className="flex items-center gap-2 pb-1">
+        <img src="/favicon.svg" alt="" className="size-5" />
+        <span className="font-semibold tracking-tight">saywhat</span>
+        <span
+          className="rounded-full border border-primary/30 bg-primary/10 px-2
+            py-0.5 text-[10px] font-semibold tracking-wide text-primary
+            uppercase"
+          title="saywhat is still being built: expect rough edges"
+        >
+          Beta
+        </span>
+      </header>
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
         {messages.length === 0 && (
           <p className="m-auto text-center text-sm text-muted-foreground">
@@ -167,6 +190,7 @@ export default function ChatPanel({
 
       <div className="relative">
         <Textarea
+          ref={inputRef}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}

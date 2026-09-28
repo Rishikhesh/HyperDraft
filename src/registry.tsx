@@ -1,12 +1,13 @@
 // How each catalog name is drawn: name -> real React component.
-import { lazy, Suspense, type ComponentType } from 'react'
+import { lazy, Suspense, type ComponentType, type ReactNode } from 'react'
 import { defineRegistry } from '@json-render/react'
 import { shadcnComponents } from '@json-render/shadcn'
 import * as appBlocks from '@/blocks/app'
 import * as layoutBlocks from '@/blocks/layout'
 import * as marketingBlocks from '@/blocks/marketing'
 import * as overrides from '@/blocks/overrides'
-import { catalog } from '@/catalog'
+import { addedClassName, catalog } from '@/catalog'
+import { cn } from '@/lib/utils'
 
 // Big, less common blocks load on first use, so a page without a chart
 // doesn't download recharts. Each group is one download.
@@ -30,6 +31,30 @@ function lazyBlocks<M, N extends keyof M & string>(
     }),
   ) as Pick<M, N>
 }
+
+// json-render components that ignore className get a wrapper holding
+// it, so width, spacing and alignment classes work on them too. Our own
+// versions (Heading, Text, Button) apply it themselves.
+type Drawn = (ctx: { props: { className?: string | null } }) => ReactNode
+function withClassName(Component: Drawn): Drawn {
+  return function WithClassName(ctx) {
+    const className = ctx.props.className
+    if (!className) return <Component {...ctx} />
+    return (
+      <div className={cn(className)}>
+        <Component {...ctx} />
+      </div>
+    )
+  }
+}
+const wrapped = Object.fromEntries(
+  addedClassName.map((name) => [
+    name,
+    withClassName(
+      shadcnComponents[name as keyof typeof shadcnComponents] as Drawn,
+    ),
+  ]),
+) as unknown as typeof shadcnComponents
 
 const chartBlocks = lazyBlocks(() => import('@/blocks/chart'), ['Chart'])
 const showcaseBlocks = lazyBlocks(
@@ -67,6 +92,7 @@ const appParts = lazyBlocks(
 export const { registry } = defineRegistry(catalog, {
   components: {
     ...shadcnComponents,
+    ...wrapped,
     ...layoutBlocks,
     ...marketingBlocks,
     ...appBlocks,

@@ -48,7 +48,13 @@ export function TextEffect({
     case 'typing':
       return <TypingAnimation as="span">{text}</TypingAnimation>
     case 'aurora':
-      return <AuroraText>{text}</AuroraText>
+      return (
+        <AuroraText
+          colors={['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)']}
+        >
+          {text}
+        </AuroraText>
+      )
     case 'animate':
       return (
         <TextAnimate as="span" by="word" animation="blurInUp" once>
@@ -78,7 +84,10 @@ export function TextEffect({
       )
     case 'gradient':
       return (
-        <AnimatedGradientText colorFrom="#6366f1" colorTo="#d946ef">
+        <AnimatedGradientText
+          colorFrom="var(--chart-1)"
+          colorTo="var(--chart-2)"
+        >
           {text}
         </AnimatedGradientText>
       )
@@ -138,7 +147,9 @@ export function CardEffect({
       return (
         <div {...tag} className={cn('relative overflow-hidden', className)}>
           {children}
-          <ShineBorder shineColor={['#6366f1', '#d946ef', '#38bdf8']} />
+          <ShineBorder
+            shineColor={['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)']}
+          />
         </div>
       )
     case 'neon':
@@ -150,7 +161,10 @@ export function CardEffect({
           className="h-full"
           borderSize={2}
           borderRadius={12}
-          neonColors={{ firstColor: '#6366f1', secondColor: '#d946ef' }}
+          neonColors={{
+            firstColor: 'var(--chart-1)',
+            secondColor: 'var(--chart-2)',
+          }}
         >
           <div
             className={cn(className, 'border-0 bg-transparent p-0 shadow-none')}

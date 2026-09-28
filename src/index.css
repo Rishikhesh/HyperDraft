@@ -289,3 +289,47 @@
     animation: sw-twinkle 3s ease-in-out infinite;
   }
 }
+
+/* Page dials: density sets the space between sections */
+.sw-density-airy {
+  --sw-section-y: 7rem;
+}
+.sw-density-balanced {
+  --sw-section-y: 4rem;
+}
+.sw-density-compact {
+  --sw-section-y: 2.25rem;
+}
+/* Sparkles are an endless twinkle: gone when the page is still */
+.sw-still .sw-sparkle {
+  display: none;
+}
+/* motion "still": nothing moves by itself (hover feedback stays, and
+   scrolling rows the user asked for keep scrolling) */
+.sw-still :not(.animate-marquee, .animate-marquee-vertical),
+.sw-still :not(.animate-marquee, .animate-marquee-vertical)::before,
+.sw-still :not(.animate-marquee, .animate-marquee-vertical)::after {
+  animation: none !important;
+}
+
+/* The empty preview's wireframe: its blocks keep assembling */
+@keyframes sw-build {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  15%,
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sw-build {
+    transform-box: fill-box;
+    animation: sw-build 5s ease-out infinite both;
+  }
+}

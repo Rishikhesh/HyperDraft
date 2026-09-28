@@ -2,6 +2,7 @@
 import type { Spec, UIElement } from '@json-render/core'
 import {
   get,
+  has,
   includes,
   isArray,
   isEqual,
@@ -10,6 +11,7 @@ import {
   set,
 } from 'lodash-es'
 import type { z } from 'zod'
+import { palettes } from '../src/blocks/palettes'
 import { componentDefinitions } from '../src/catalog'
 
 // Blocks meant to sit inside a Section (for padding and width). Put
@@ -45,6 +47,15 @@ export function repair(spec: Spec) {
     }
     fixProps(element)
     listAsContainer(element)
+    // A palette id the app doesn't know: none
+    const palette = get(element.props, 'palette')
+    if (
+      element.type === 'Page' &&
+      palette != null &&
+      !has(palettes, String(palette))
+    ) {
+      element.props.palette = null
+    }
   }
 }
 

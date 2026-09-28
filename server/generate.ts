@@ -72,6 +72,8 @@ export async function generate(
       history,
       decision.scope,
       decision.components,
+      decision.product,
+      decision.dials,
       send,
       signal,
       elapsed,
@@ -102,10 +104,34 @@ export async function generate(
   const finish = (model: string) =>
     send({ kind: 'done', ...changes.result(), model, ms: elapsed() })
 
+  // A new look for the whole page ("like a luxury brand"): Jev's
+  // palette for it, set before anything else
+  const root = spec.elements[spec.root]
+  const pageWide = [spec.root, 'page'].includes(decision.edit?.target ?? '')
+  const palette =
+    decision.edit?.kind === 'style' && pageWide && decision.product
+      ? decision.product
+      : get(root, 'props.palette')
+  const recolored = palette !== get(root, 'props.palette')
+  if (recolored) {
+    changes.apply({
+      op: 'add',
+      path: `/elements/${spec.root}/props/palette`,
+      value: palette,
+    })
+  }
+
   // 2. Simple edits: code does them from Jev's answers, no LLM needed
-  if (
-    await tryWithoutLlm(message, spec, decision, selectedProp, changes, send)
-  ) {
+  const simple = await tryWithoutLlm(
+    message,
+    spec,
+    decision,
+    selectedProp,
+    recolored,
+    changes,
+    send,
+  )
+  if (simple) {
     return finish('jev')
   }
 
@@ -134,6 +160,15 @@ export async function generate(
     changes.skip,
     (text) => send({ kind: 'narration', text }),
   )
+  // The LLM can't pick palettes; if it rewrote the Page's props, the
+  // palette the page should have is put back
+  if (palette && changes.prop(spec.root, 'palette') !== palette) {
+    changes.apply({
+      op: 'add',
+      path: `/elements/${spec.root}/props/palette`,
+      value: palette,
+    })
+  }
   // New sections the LLM forgot to link into the page would never show
   if (decision.edit?.kind === 'add') {
     changes.adoptOrphans(selectedId ?? decision.edit.target)
@@ -147,6 +182,7 @@ async function tryWithoutLlm(
   spec: Spec,
   decision: Decision,
   selectedProp: string | null,
+  recolored: boolean, // the palette alone may be the whole change
   changes: ReturnType<typeof tracker>,
   send: Send,
 ): Promise<boolean> {
@@ -220,7 +256,8 @@ async function tryWithoutLlm(
     const patches = targets.flatMap((id, index) =>
       propPatches(id, picks[index] ?? {}),
     )
-    if (!patches.length) return false // nothing to change: ask the LLM
+    // Nothing (else) to change: done if recolored, else ask the LLM
+    if (!patches.length) return recolored
     patches.forEach(changes.apply)
     return true
   }
@@ -251,6 +288,8 @@ function editScope(
 ): Set<string> | null {
   const edit = decision.edit
   if (!edit || edit.kind === 'restructure') return null
+  // About the page as a whole: nothing to narrow down to
+  if (!selectedId && [spec.root, 'page'].includes(edit.target)) return null
   if (!selectedId && edit.targetConfidence < TARGET_SURE) return null
   const ids = edit.scope.filter((id) => spec.elements[id])
   if (!ids.length || ids.includes(spec.root)) return null
