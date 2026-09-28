@@ -30,6 +30,8 @@ const textEffect = z
     'highlight',
     'rotate',
     'morph',
+    'glitch',
+    'focus',
   ])
   .nullable()
 const textEffectHelp =
@@ -38,16 +40,21 @@ const textEffectHelp =
   'twinkles, "scramble" decodes it like a terminal, "shiny" sweeps a ' +
   'shine across, "highlight" marks it like a highlighter pen, "rotate" ' +
   'ends it with a word that keeps changing through `words`, "morph" ' +
-  'melts between the title and `words`. titleFont gives just this ' +
+  'melts between the title and `words`, "glitch" jitters it with ' +
+  'colored slices (tech, gaming, bold brands), "focus" blurs every ' +
+  'word but one and moves a focus frame across them. titleFont gives just this ' +
   'title its own font (the page sets fonts for everything else).'
 const words = z.array(z.string()).nullable()
 
 // Animated borders and surfaces for cards
-const cardEffect = z.enum(['none', 'beam', 'shine', 'neon', 'glare']).nullable()
+const cardEffect = z
+  .enum(['none', 'beam', 'shine', 'neon', 'glare', 'spotlight'])
+  .nullable()
 const cardEffectHelp =
   ' cardEffect: "beam" runs a light around the border, "shine" makes ' +
   'the border shimmer, "neon" gives a glowing neon frame, "glare" ' +
-  'sweeps a glare over it on hover.'
+  'sweeps a glare over it on hover, "spotlight" follows the pointer ' +
+  'with a soft light.'
 
 const hoverHelp =
   ' hover: "lift" raises the cards, "glow" rings them in the brand color.'
@@ -118,6 +125,11 @@ export const blockDefinitions = {
           'hexagons',
           'stripes',
           'light-rays',
+          // Canvas / WebGL (React Bits)
+          'aurora-flow',
+          'threads',
+          'galaxy',
+          'waves',
         ])
         .nullable(),
       texture: z.enum(['none', 'noise']).nullable(),
@@ -131,6 +143,7 @@ export const blockDefinitions = {
       headingFont: z.enum(fontNames).nullable(),
       align: z.enum(['top', 'center']).nullable(),
       surface: z.enum(['solid', 'glass']).nullable(),
+      scroll: z.enum(['native', 'smooth']).nullable(),
     }),
     slots: ['default'],
     description:
@@ -141,7 +154,10 @@ export const blockDefinitions = {
       '"flickering-grid" (tiny squares twinkling), "retro-grid" (a ' +
       'synthwave floor grid in perspective), "hexagons" (honeycomb ' +
       'lines), "stripes" (diagonal lines), "light-rays" (soft beams from ' +
-      'above). texture "noise" adds a film-grain feel. ' +
+      'above), "aurora-flow" (northern lights flowing across the top), ' +
+      '"threads" (glowing lines rippling like silk), "galaxy" (a slowly ' +
+      'turning starfield), "waves" (fine lines swaying like a field). ' +
+      'texture "noise" adds a film-grain feel. ' +
       'align "center" centers its content (auth pages, ' +
       'simple forms); "top" stacks Navbar, Hero, Sections, Footer. ' +
       'palette: the brand colors, chosen by the app; keep its value. ' +
@@ -152,7 +168,10 @@ export const blockDefinitions = {
       'font sets the text, headingFont the titles (pair a display or ' +
       `serif heading with a plain text font): ${fontHelp}. ` +
       'surface "glass" turns every card on the page into frosted, ' +
-      'see-through glass (best over "aurora" or "gradient").',
+      'see-through glass (best over "aurora" or "gradient"). ' +
+      'scroll "smooth" gives long pages eased, weighty scrolling ' +
+      '(landing pages, portfolios, storytelling); "native" for apps, ' +
+      'forms and dashboards.',
   },
   Navbar: {
     props: styled({
@@ -542,7 +561,7 @@ export const blockDefinitions = {
           highlighted: z.boolean().nullable(),
         }),
       ),
-      layout: z.enum(['cards', 'comparison']).nullable(),
+      layout: z.enum(['cards', 'comparison', 'tabs']).nullable(),
       hover,
       cardEffect,
     }),
@@ -550,7 +569,8 @@ export const blockDefinitions = {
       'Pricing plans side by side. Mark one plan highlighted (the ' +
       'recommended one). price like "$12", period like "/month". ' +
       'layout "comparison": one table, features as rows, plans as ' +
-      'columns (good for many features).' +
+      'columns (good for many features); "tabs": one tab per plan, ' +
+      'showing that plan alone ("pricing in tabs").' +
       hoverHelp +
       cardEffectHelp,
   },

@@ -6,7 +6,7 @@ import {
   autoFixSpec,
   parseSpecStreamLine,
 } from '@json-render/core'
-import { findKey, get, includes, keys, last } from 'lodash-es'
+import { findKey, get, includes, isEqual, keys, last } from 'lodash-es'
 import type { ChatEvent } from '../src/api'
 import { catalog, componentNames } from '../src/catalog'
 import { fixLine, repair } from './repair'
@@ -99,7 +99,11 @@ export function tracker(
       if (!check.success) {
         throw new Error(`The generated UI was invalid: ${check.error?.message}`)
       }
-      return { spec, changed: [...changed], skipped }
+      // Only what really differs: a patch the repair undid (an option
+      // that doesn't exist) is not a change, and the app says so
+      const differs = (id: string) =>
+        !isEqual(spec.elements[id], start.elements[id])
+      return { spec, changed: [...changed].filter(differs), skipped }
     },
   }
 }

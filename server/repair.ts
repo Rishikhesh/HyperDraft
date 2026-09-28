@@ -93,7 +93,12 @@ function fixProps(element: UIElement) {
       .error?.issues.some((issue) => isEqual(issue.path, path)) ?? false
   const issues = schema.safeParse(element.props).error?.issues ?? []
   for (const { path } of issues) {
-    if (!path.length || isBinding(get(element.props, path[0]))) continue
+    // A binding anywhere along the path ({"$cond": …} on one plan's
+    // "highlighted") is filled in at render time: not a mistake
+    const bound = path.some((_, end) =>
+      isBinding(get(element.props, path.slice(0, end + 1))),
+    )
+    if (!path.length || bound) continue
     const value = get(element.props, path)
     set(element.props, path, null)
     if (invalid(path)) set(element.props, path, value) // null not allowed

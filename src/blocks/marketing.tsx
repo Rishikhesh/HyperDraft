@@ -1,5 +1,6 @@
 // Landing-page sections. They look designed out of the box, so the AI
 // only supplies the content.
+import { useState } from 'react'
 import type { BaseComponentProps } from '@json-render/react'
 import {
   CheckIcon,
@@ -146,8 +147,118 @@ export function FeatureGrid({ props }: PropsOf<'FeatureGrid'>) {
   )
 }
 
+type PricingProps = PropsOf<'PricingTable'>['props']
+type Plan = PricingProps['plans'][number]
+
+function PlanCard({
+  plan,
+  index,
+  props,
+}: {
+  plan: Plan
+  index: number
+  props: PricingProps
+}) {
+  return (
+    <CardEffect
+      part={`plans.${index}`}
+      effect={props.cardEffect}
+      className={cn(
+        'relative flex flex-col gap-6 rounded-xl border bg-card p-6',
+        hoverOf(props.hover),
+        plan.highlighted && 'shadow-lg ring-2 ring-primary',
+      )}
+    >
+      {plan.highlighted && (
+        <span
+          className="absolute top-5 right-5 rounded-full bg-primary px-3 py-0.5
+            text-xs font-medium text-primary-foreground"
+        >
+          Most popular
+        </span>
+      )}
+      <div className="flex flex-col gap-1">
+        <h3 className="font-semibold">{plan.name}</h3>
+        {plan.description && (
+          <p className="text-sm text-muted-foreground">{plan.description}</p>
+        )}
+      </div>
+      <p className="flex items-baseline gap-1">
+        <span className="text-4xl font-bold tracking-tight">{plan.price}</span>
+        {plan.period && (
+          <span className="text-sm text-muted-foreground">{plan.period}</span>
+        )}
+      </p>
+      <ul className="flex flex-col gap-2 text-sm">
+        {list(plan.features).map((feature, index) => (
+          <li key={index} className="flex gap-2">
+            <CheckIcon className="size-4 shrink-0 text-primary" />
+            {feature}
+          </li>
+        ))}
+      </ul>
+      <Button variant={plan.highlighted ? 'default' : 'outline'}>
+        {plan.cta}
+      </Button>
+    </CardEffect>
+  )
+}
+
+// layout "tabs": one tab per plan, showing that plan's card; opens on
+// the highlighted plan
+function PricingTabs(props: PricingProps) {
+  const plans = list(props.plans)
+  const [active, setActive] = useState(() =>
+    Math.max(
+      0,
+      plans.findIndex((plan) => plan.highlighted),
+    ),
+  )
+  const plan = plans[Math.min(active, plans.length - 1)]
+  return (
+    <div
+      className={cn('flex w-full flex-col items-center gap-8', props.className)}
+    >
+      <div
+        role="tablist"
+        className="flex gap-1 rounded-full border bg-muted p-1"
+      >
+        {plans.map((plan, index) => (
+          <button
+            key={index}
+            type="button"
+            role="tab"
+            aria-selected={index === active}
+            onClick={() => setActive(index)}
+            className={cn(
+              'rounded-full px-5 py-2 text-sm font-medium transition-colors',
+              'duration-200 ease-out',
+              index === active
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {plan.name}
+          </button>
+        ))}
+      </div>
+      {plan && (
+        <div
+          key={active}
+          role="tabpanel"
+          className="w-full max-w-md animate-in duration-300 fade-in
+            slide-in-from-bottom-2"
+        >
+          <PlanCard plan={plan} index={active} props={props} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function PricingTable({ props }: PropsOf<'PricingTable'>) {
   if (props.layout === 'comparison') return <PricingComparison {...props} />
+  if (props.layout === 'tabs') return <PricingTabs {...props} />
   return (
     <div
       className={cn(
@@ -157,54 +268,7 @@ export function PricingTable({ props }: PropsOf<'PricingTable'>) {
       )}
     >
       {list(props.plans).map((plan, index) => (
-        <CardEffect
-          key={index}
-          part={`plans.${index}`}
-          effect={props.cardEffect}
-          className={cn(
-            'relative flex flex-col gap-6 rounded-xl border bg-card p-6',
-            hoverOf(props.hover),
-            plan.highlighted && 'shadow-lg ring-2 ring-primary',
-          )}
-        >
-          {plan.highlighted && (
-            <span
-              className="absolute top-5 right-5 rounded-full bg-primary px-3
-                py-0.5 text-xs font-medium text-primary-foreground"
-            >
-              Most popular
-            </span>
-          )}
-          <div className="flex flex-col gap-1">
-            <h3 className="font-semibold">{plan.name}</h3>
-            {plan.description && (
-              <p className="text-sm text-muted-foreground">
-                {plan.description}
-              </p>
-            )}
-          </div>
-          <p className="flex items-baseline gap-1">
-            <span className="text-4xl font-bold tracking-tight">
-              {plan.price}
-            </span>
-            {plan.period && (
-              <span className="text-sm text-muted-foreground">
-                {plan.period}
-              </span>
-            )}
-          </p>
-          <ul className="flex flex-col gap-2 text-sm">
-            {list(plan.features).map((feature, index) => (
-              <li key={index} className="flex gap-2">
-                <CheckIcon className="size-4 shrink-0 text-primary" />
-                {feature}
-              </li>
-            ))}
-          </ul>
-          <Button variant={plan.highlighted ? 'default' : 'outline'}>
-            {plan.cta}
-          </Button>
-        </CardEffect>
+        <PlanCard key={index} plan={plan} index={index} props={props} />
       ))}
     </div>
   )
@@ -531,8 +595,6 @@ export function List({ props }: PropsOf<'List'>) {
     </Tag>
   )
 }
-
-type PricingProps = PropsOf<'PricingTable'>['props']
 
 // All plans in one table: features as rows, plans as columns
 function PricingComparison(props: PricingProps) {

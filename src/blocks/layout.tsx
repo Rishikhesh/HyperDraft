@@ -1,8 +1,10 @@
 // How our blocks are drawn. Colors come from theme variables, so every
 // block looks right in light and dark mode.
-import { useState, type CSSProperties } from 'react'
+import { lazy, Suspense, useEffect, useState, type CSSProperties } from 'react'
 import type { BaseComponentProps } from '@json-render/react'
 import { MenuIcon, XIcon } from 'lucide-react'
+import Lenis from 'lenis'
+import 'lenis/dist/lenis.css'
 import { MotionConfig } from 'motion/react'
 import type { z } from 'zod'
 import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern'
@@ -21,6 +23,7 @@ import { StripedPattern } from '@/components/ui/striped-pattern'
 import { cn } from '@/lib/utils'
 import type { blockDefinitions } from './definitions'
 import { palettes } from './palettes'
+import type { ShaderBackgroundName } from './shader-backgrounds'
 import { TextEffect } from './effects'
 import { family, useFont } from './use-font'
 import { Illustration } from './illustration'
@@ -54,6 +57,11 @@ const pageBackgrounds = {
   hexagons: 'bg-background',
   stripes: 'bg-background',
   'light-rays': 'bg-background',
+  // Canvas / WebGL (React Bits): drawn by the layer below
+  'aurora-flow': 'bg-background',
+  threads: 'bg-background',
+  galaxy: 'bg-background',
+  waves: 'bg-background',
 }
 
 // Soft edges, so a pattern fades out instead of ending in a hard line
@@ -88,10 +96,30 @@ const backgroundLayers: Partial<Record<string, React.ReactNode>> = {
   'light-rays': <LightRays color="rgba(129, 140, 248, 0.25)" />,
 }
 
+// Canvas backgrounds (React Bits), loaded only when a page uses one
+const ShaderBackground = lazy(() => import('./shader-backgrounds'))
+const shaderBackgrounds: string[] = [
+  'aurora-flow',
+  'threads',
+  'galaxy',
+  'waves',
+] satisfies ShaderBackgroundName[]
+
+// scroll "smooth": eased, weighty scrolling (Lenis), unless the visitor
+// asked for reduced motion
+function useSmoothScroll(on: boolean) {
+  useEffect(() => {
+    if (!on || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const lenis = new Lenis({ autoRaf: true })
+    return () => lenis.destroy()
+  }, [on])
+}
+
 export function Page({ props, children }: PropsOf<'Page'>) {
   const background = props.background ?? 'plain'
   useFont(props.font)
   useFont(props.headingFont)
+  useSmoothScroll(props.scroll === 'smooth' && props.motion !== 'still')
   // Text uses font; titles (h1-h4) use headingFont, see index.css
   // The palette recolors the brand parts of the theme for this page:
   // buttons, focus rings, charts, illustrations and color backgrounds
@@ -149,6 +177,20 @@ export function Page({ props, children }: PropsOf<'Page'>) {
             motion-reduce:hidden"
         >
           {backgroundLayers[background]}
+        </div>
+      )}
+      {shaderBackgrounds.includes(background) && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 overflow-hidden
+            motion-reduce:hidden"
+        >
+          <Suspense>
+            <ShaderBackground
+              kind={background as ShaderBackgroundName}
+              palette={palette}
+            />
+          </Suspense>
         </div>
       )}
       {props.texture === 'noise' && (

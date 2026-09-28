@@ -39,6 +39,7 @@ const pageOptions = Object.entries(optionProps('Page'))
         'background',
         'texture',
         'surface',
+        'scroll',
       ].includes(prop),
   )
   .map(([prop, values]) => `${prop}: ${values.join(' | ')}`)

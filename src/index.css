@@ -161,6 +161,36 @@
   --animate-shine: shine var(--duration) infinite linear;
   --animate-background-position-spin: background-position-spin 3000ms infinite
     alternate;
+  /* React Bits GlitchText */
+  --animate-glitch-after: glitch var(--after-duration) infinite linear
+    alternate-reverse;
+  --animate-glitch-before: glitch var(--before-duration) infinite linear
+    alternate-reverse;
+  @keyframes glitch {
+    0%,
+    50% {
+      clip-path: inset(20% 0 50% 0);
+    }
+    10%,
+    60% {
+      clip-path: inset(15% 0 55% 0);
+    }
+    20%,
+    70% {
+      clip-path: inset(30% 0 40% 0);
+    }
+    30%,
+    80% {
+      clip-path: inset(10% 0 60% 0);
+    }
+    40%,
+    90% {
+      clip-path: inset(40% 0 20% 0);
+    }
+    100% {
+      clip-path: inset(25% 0 35% 0);
+    }
+  }
   @keyframes shimmer-slide {
     to {
       transform: translate(calc(100cqw - 100%), 0);

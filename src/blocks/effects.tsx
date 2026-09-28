@@ -16,6 +16,9 @@ import { SparklesText } from '@/components/ui/sparkles-text'
 import { TextAnimate } from '@/components/ui/text-animate'
 import { TypingAnimation } from '@/components/ui/typing-animation'
 import { WordRotate } from '@/components/ui/word-rotate'
+import GlitchText from '@/components/reactbits/GlitchText'
+import SpotlightCard from '@/components/reactbits/SpotlightCard'
+import TrueFocus from '@/components/reactbits/TrueFocus'
 import { cn } from '@/lib/utils'
 import { list } from './safe'
 
@@ -31,6 +34,8 @@ export type TextEffectName =
   | 'highlight'
   | 'rotate'
   | 'morph'
+  | 'glitch'
+  | 'focus'
 
 // The title's text with its effect. The effect components bring their
 // own sizes; "inherit" keeps the heading's size and weight instead.
@@ -114,12 +119,25 @@ export function TextEffect({
             md:h-[1.2em] lg:text-[length:inherit]"
         />
       )
+    case 'glitch':
+      return <GlitchText speed={0.6}>{text}</GlitchText>
+    case 'focus':
+      return (
+        <TrueFocus
+          sentence={text}
+          blurAmount={4}
+          borderColor="var(--primary)"
+          glowColor="color-mix(in oklab, var(--primary) 60%, transparent)"
+          pauseBetweenAnimations={1.2}
+        />
+      )
     default:
       return text
   }
 }
 
-export type CardEffectName = 'none' | 'beam' | 'shine' | 'neon' | 'glare'
+export type CardEffectName =
+  'none' | 'beam' | 'shine' | 'neon' | 'glare' | 'spotlight'
 
 // Wraps one card. "beam" and "shine" draw over the card's own border;
 // "neon" and "glare" wrap the whole card.
@@ -185,6 +203,16 @@ export function CardEffect({
         >
           {children}
         </GlareHover>
+      )
+    case 'spotlight':
+      return (
+        <SpotlightCard
+          {...tag}
+          className={className}
+          spotlightColor="color-mix(in oklab, var(--primary) 30%, transparent)"
+        >
+          {children}
+        </SpotlightCard>
       )
     default:
       return (

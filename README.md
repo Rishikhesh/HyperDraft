@@ -79,6 +79,7 @@ preview ◄─ patches stream in and animate; chat shows each step live
 | `src/blocks/effects.tsx`    | Title effects and card borders                  |
 | `src/blocks/overrides.tsx`  | json-render's Button/Card/Heading, extended     |
 | `src/components/ui/`        | shadcn + Magic UI (MIT), via the shadcn CLI     |
+| `src/components/reactbits/` | React Bits (MIT + Commons Clause, see its file) |
 | `server/index.ts`           | Bun server: /api/chat and the built app         |
 | `server/chat.ts`            | /api/chat: rate limit, validate, stream events  |
 | `api/chat.ts`               | The same handler as a Vercel function           |
@@ -112,3 +113,9 @@ Design knowledge adapted from these MIT-licensed projects:
   rules
 - [Magic UI](https://magicui.design) and [shadcn/ui](https://ui.shadcn.com):
   components
+- [Lenis](https://lenis.dev): the Page option `scroll: smooth`
+
+And from [React Bits](https://reactbits.dev) (MIT + Commons Clause): the canvas
+backgrounds (aurora-flow, threads, galaxy, waves) and the glitch, focus and
+spotlight effects. Its license allows using them inside the app but not
+redistributing the components, so a future "export as code" must leave them out.

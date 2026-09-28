@@ -111,6 +111,7 @@ export async function buildPage(
       'background',
       'texture',
       'surface',
+      'scroll',
     ]).catch(() => null)
     void watchLook(pageOptions)
     send({ kind: 'step', text: 'Planning the page…' })
