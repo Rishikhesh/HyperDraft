@@ -1,6 +1,6 @@
 // How our blocks are drawn. Colors come from theme variables, so every
 // block looks right in light and dark mode.
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import type { BaseComponentProps } from '@json-render/react'
 import { MenuIcon, XIcon } from 'lucide-react'
 import { MotionConfig } from 'motion/react'
@@ -20,9 +20,9 @@ import { Ripple } from '@/components/ui/ripple'
 import { StripedPattern } from '@/components/ui/striped-pattern'
 import { cn } from '@/lib/utils'
 import type { blockDefinitions } from './definitions'
-import { fontUrl, type FontName } from './fonts'
 import { palettes } from './palettes'
 import { TextEffect } from './effects'
+import { family, useFont } from './use-font'
 import { Illustration } from './illustration'
 import { list } from './safe'
 
@@ -87,20 +87,6 @@ const backgroundLayers: Partial<Record<string, React.ReactNode>> = {
   stripes: <StripedPattern className={cn('text-foreground/15', fade)} />,
   'light-rays': <LightRays color="rgba(129, 140, 248, 0.25)" />,
 }
-
-// Adds a Google font's stylesheet to the page once, on first use
-function useFont(name: FontName | null | undefined) {
-  useEffect(() => {
-    const url = name && fontUrl(name)
-    if (!url || document.querySelector(`link[href="${url}"]`)) return
-    const link = document.createElement('link')
-    link.rel = 'stylesheet'
-    link.href = url
-    document.head.append(link)
-  }, [name])
-}
-
-const family = (name: FontName) => `'${name}', ui-sans-serif, sans-serif`
 
 export function Page({ props, children }: PropsOf<'Page'>) {
   const background = props.background ?? 'plain'
@@ -239,6 +225,7 @@ export function Navbar({ props }: PropsOf<'Navbar'>) {
 }
 
 export function Hero({ props, children }: PropsOf<'Hero'>) {
+  useFont(props.titleFont)
   const layout = props.layout ?? 'centered'
   const image = props.image || undefined
   const centered =
@@ -264,6 +251,9 @@ export function Hero({ props, children }: PropsOf<'Hero'>) {
       <h1
         data-sw-prop="title"
         className="text-4xl font-bold tracking-tight text-balance md:text-6xl"
+        style={
+          props.titleFont ? { fontFamily: family(props.titleFont) } : undefined
+        }
       >
         <TextEffect
           text={props.title}
@@ -372,6 +362,7 @@ const sectionWidths = {
 }
 
 export function Section({ props, children }: PropsOf<'Section'>) {
+  useFont(props.titleFont)
   return (
     <section
       className={cn(
@@ -392,6 +383,11 @@ export function Section({ props, children }: PropsOf<'Section'>) {
               <h2
                 data-sw-prop="title"
                 className="text-3xl font-bold tracking-tight"
+                style={
+                  props.titleFont
+                    ? { fontFamily: family(props.titleFont) }
+                    : undefined
+                }
               >
                 <TextEffect
                   text={props.title}

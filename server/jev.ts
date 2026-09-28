@@ -424,7 +424,13 @@ function optionQuestions(
           `"${id}" (a ${element.type})? \`option_help\` explains the values.`,
         {
           unchanged: 'Leave it as it is now',
-          ...Object.fromEntries(values.map((value) => [value, null])),
+          // The current value isn't a change: "something modern" must
+          // pick another font than the one showing
+          ...Object.fromEntries(
+            values
+              .filter((value) => value !== currentValue(element, prop))
+              .map((value) => [value, null]),
+          ),
         },
       ),
     ),
@@ -442,6 +448,17 @@ function optionQuestions(
   }
 }
 
+// What an option shows now. Unset fonts show what's already there: the
+// page font (default Geist) for headings and single titles.
+function currentValue(element: UIElement, prop: string): unknown {
+  const value = get(element.props, prop)
+  if (value != null) return value
+  if (prop === 'font') return 'Geist'
+  if (prop === 'headingFont') return get(element.props, 'font') ?? 'Geist'
+  if (prop === 'titleFont') return 'Geist'
+  return undefined
+}
+
 // A selected part only changes its own options: with the picture
 // selected, "make this orbit" must not also re-layout the whole Hero
 const PART_OPTIONS: Record<string, string[]> = {
@@ -451,7 +468,7 @@ const PART_OPTIONS: Record<string, string[]> = {
     'illustrationMotion',
     'imageSide',
   ],
-  title: ['titleEffect', 'words'],
+  title: ['titleEffect', 'titleFont', 'words'],
 }
 function partOptions(prop: string | null): string[] | null {
   if (!prop) return null

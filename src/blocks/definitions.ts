@@ -38,7 +38,8 @@ const textEffectHelp =
   'twinkles, "scramble" decodes it like a terminal, "shiny" sweeps a ' +
   'shine across, "highlight" marks it like a highlighter pen, "rotate" ' +
   'ends it with a word that keeps changing through `words`, "morph" ' +
-  'melts between the title and `words`.'
+  'melts between the title and `words`. titleFont gives just this ' +
+  'title its own font (the page sets fonts for everything else).'
 const words = z.array(z.string()).nullable()
 
 // Animated borders and surfaces for cards
@@ -87,6 +88,7 @@ export const blockDefinitions = {
     props: shadcn.Heading.props.extend({
       effect: textEffect,
       words,
+      titleFont: z.enum(fontNames).nullable(),
       className: z.string().nullable(),
     }),
     description: shadcn.Heading.description + '.' + textEffectHelp,
@@ -175,6 +177,7 @@ export const blockDefinitions = {
       illustrationIcon: icon,
       illustrationMotion: z.enum(['still', 'moving']).nullable(),
       titleEffect: textEffect,
+      titleFont: z.enum(fontNames).nullable(),
       words,
     }),
     slots: ['default'],
@@ -194,6 +197,7 @@ export const blockDefinitions = {
       background: z.enum(['none', 'muted']).nullable(),
       width: z.enum(['narrow', 'normal', 'wide']).nullable(),
       titleEffect: textEffect,
+      titleFont: z.enum(fontNames).nullable(),
       words,
       reveal: z.enum(['none', 'fade']).nullable(),
     }),

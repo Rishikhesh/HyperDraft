@@ -5,7 +5,7 @@
 
 export const fonts = {
   // Sans
-  Geist: { weights: '', mood: 'default, neutral and modern' },
+  Geist: { weights: '', mood: 'the plain default' },
   Inter: { weights: '400;500;600;700', mood: 'neutral, product UI' },
   'DM Sans': { weights: '400;500;600;700', mood: 'soft, friendly' },
   Manrope: { weights: '400;500;600;700', mood: 'clean, geometric' },

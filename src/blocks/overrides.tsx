@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import type { blockDefinitions } from './definitions'
 import { CardEffect, TextEffect } from './effects'
+import { family, useFont } from './use-font'
 
 type Defs = typeof blockDefinitions
 type PropsOf<K extends keyof Defs> = BaseComponentProps<
@@ -127,8 +128,14 @@ export function Text({ props }: PropsOf<'Text'>) {
 // The original Heading, plus title effects
 export function Heading({ props }: PropsOf<'Heading'>) {
   const Tag = props.level ?? 'h2'
+  useFont(props.titleFont)
   return (
-    <Tag className={cn(headingSizes[Tag], 'text-left', props.className)}>
+    <Tag
+      className={cn(headingSizes[Tag], 'text-left', props.className)}
+      style={
+        props.titleFont ? { fontFamily: family(props.titleFont) } : undefined
+      }
+    >
       <TextEffect text={props.text} effect={props.effect} words={props.words} />
     </Tag>
   )
