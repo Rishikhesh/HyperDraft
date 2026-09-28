@@ -245,3 +245,8 @@
     }
   }
 }
+
+/* Page headingFont: titles in the generated page use it when set */
+.sw-preview :is(h1, h2, h3, h4, [data-slot='card-title']) {
+  font-family: var(--sw-heading-font, inherit);
+}

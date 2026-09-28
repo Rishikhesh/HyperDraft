@@ -4,6 +4,7 @@
 // No React here: the server reads these too.
 import { shadcnComponentDefinitions as shadcn } from '@json-render/shadcn/catalog'
 import { z } from 'zod'
+import { fontHelp, fontNames } from './fonts'
 import { iconNames } from './icon-names'
 
 const link = z.object({ label: z.string(), href: z.string() })
@@ -108,6 +109,8 @@ export const blockDefinitions = {
         ])
         .nullable(),
       texture: z.enum(['none', 'noise']).nullable(),
+      font: z.enum(fontNames).nullable(),
+      headingFont: z.enum(fontNames).nullable(),
       align: z.enum(['top', 'center']).nullable(),
       surface: z.enum(['solid', 'glass']).nullable(),
     }),
@@ -123,6 +126,8 @@ export const blockDefinitions = {
       'above). texture "noise" adds a film-grain feel. ' +
       'align "center" centers its content (auth pages, ' +
       'simple forms); "top" stacks Navbar, Hero, Sections, Footer. ' +
+      'font sets the text, headingFont the titles (pair a display or ' +
+      `serif heading with a plain text font): ${fontHelp}. ` +
       'surface "glass" turns every card on the page into frosted, ' +
       'see-through glass (best over "aurora" or "gradient").',
   },

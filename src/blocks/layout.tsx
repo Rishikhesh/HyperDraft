@@ -1,6 +1,6 @@
 // How our blocks are drawn. Colors come from theme variables, so every
 // block looks right in light and dark mode.
-import { useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import type { BaseComponentProps } from '@json-render/react'
 import { MenuIcon, XIcon } from 'lucide-react'
 import type { z } from 'zod'
@@ -19,6 +19,7 @@ import { Ripple } from '@/components/ui/ripple'
 import { StripedPattern } from '@/components/ui/striped-pattern'
 import { cn } from '@/lib/utils'
 import type { blockDefinitions } from './definitions'
+import { fontUrl, type FontName } from './fonts'
 import { TextEffect } from './effects'
 import { list } from './safe'
 
@@ -84,10 +85,34 @@ const backgroundLayers: Partial<Record<string, React.ReactNode>> = {
   'light-rays': <LightRays color="rgba(129, 140, 248, 0.25)" />,
 }
 
+// Adds a Google font's stylesheet to the page once, on first use
+function useFont(name: FontName | null | undefined) {
+  useEffect(() => {
+    const url = name && fontUrl(name)
+    if (!url || document.querySelector(`link[href="${url}"]`)) return
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = url
+    document.head.append(link)
+  }, [name])
+}
+
+const family = (name: FontName) => `'${name}', ui-sans-serif, sans-serif`
+
 export function Page({ props, children }: PropsOf<'Page'>) {
   const background = props.background ?? 'plain'
+  useFont(props.font)
+  useFont(props.headingFont)
+  // Text uses font; titles (h1-h4) use headingFont, see index.css
+  const fontStyle = {
+    ...(props.font && { fontFamily: family(props.font) }),
+    ...(props.headingFont && {
+      '--sw-heading-font': family(props.headingFont),
+    }),
+  } as CSSProperties
   return (
     <div
+      style={fontStyle}
       className={cn(
         'relative isolate flex min-h-dvh w-full flex-col',
         'overflow-hidden text-foreground',

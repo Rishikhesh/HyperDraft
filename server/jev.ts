@@ -400,7 +400,7 @@ function changedProps(
   )
 }
 
-// A new page's look (background, texture, surface) for a request.
+// A new page's look (background, texture, surface, fonts) for a request.
 // Picks by sampling from Jev's probabilities among the likely values,
 // so the same request doesn't always get the same look, yet a banking
 // app never gets a playful one.
@@ -411,6 +411,8 @@ export async function decidePage(
     'background',
     'texture',
     'surface',
+    'font',
+    'headingFont',
   ])
   const { answers } = await client.systemOne({
     state: {
