@@ -21,6 +21,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { blockDefinitions } from './definitions'
 import { Icon } from './icons'
+import { Illustration } from './illustration'
 import { list, text } from './safe'
 import { useDark } from './use-dark'
 
@@ -40,16 +41,29 @@ function logoUrl(name: string, dark: boolean) {
 
 export function DeviceFrame({ props }: PropsOf<'DeviceFrame'>) {
   const image = props.image || undefined
+  // No screenshot: the screen shows a drawn one
+  const screen = (
+    <Illustration
+      style={props.illustration ?? 'cards'}
+      icon={props.illustrationIcon}
+      seed={props.url ?? 'app'}
+      className="size-full"
+    />
+  )
   if (props.device === 'phone') {
     return (
       <div className={cn('mx-auto w-full max-w-[280px]', props.className)}>
-        <Iphone src={image} />
+        <Iphone src={image} screen={screen} />
       </div>
     )
   }
   return (
     <div className={cn('w-full', props.className)}>
-      <Safari url={props.url ?? 'example.com'} imageSrc={image} />
+      <Safari
+        url={props.url ?? 'example.com'}
+        imageSrc={image}
+        screen={screen}
+      />
     </div>
   )
 }

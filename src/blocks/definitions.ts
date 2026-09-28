@@ -4,6 +4,7 @@
 // No React here: the server reads these too.
 import { shadcnComponentDefinitions as shadcn } from '@json-render/shadcn/catalog'
 import { z } from 'zod'
+import { illustrationHelp, illustrationStyles } from './art'
 import { fontHelp, fontNames } from './fonts'
 import { iconNames } from './icon-names'
 
@@ -150,6 +151,8 @@ export const blockDefinitions = {
       layout: z.enum(['centered', 'split', 'background']).nullable(),
       image: z.string().nullable(),
       imageAlt: z.string().nullable(),
+      illustration: z.enum(illustrationStyles).nullable(),
+      illustrationIcon: icon,
       titleEffect: textEffect,
       words,
     }),
@@ -158,7 +161,9 @@ export const blockDefinitions = {
       'Large headline area at the top of a landing page. Children are ' +
       'usually a horizontal Stack of Buttons. layout: "centered" (text ' +
       'only), "split" (text beside the image), "background" (the image ' +
-      'fills the hero behind the text). image: an https photo URL.' +
+      'fills the hero behind the text). Leave image null unless the ' +
+      'request needs real photos; the picture is then an illustration. ' +
+      illustrationHelp +
       textEffectHelp,
   },
   Section: {
@@ -192,6 +197,8 @@ export const blockDefinitions = {
       image: z.string().nullable(),
       imageAlt: z.string().nullable(),
       imageSide: z.enum(['left', 'right']).nullable(),
+      illustration: z.enum(illustrationStyles).nullable(),
+      illustrationIcon: icon,
       caption: z.string().nullable(),
     }),
     slots: ['default'],
@@ -199,10 +206,11 @@ export const blockDefinitions = {
       'Split screen: an image fills one half of the screen, the children ' +
       'are centered in the other half. Use for "image on one side, form ' +
       'or text on the other" (sign in with a picture, contact, product ' +
-      'showcase). Put it directly in a Page with align "top". image is ' +
-      'an https URL (e.g. from images.unsplash.com); without one, the ' +
-      'half shows a soft gradient. caption: an optional quote over the ' +
-      'image.',
+      'showcase). Put it directly in a Page with align "top". image: ' +
+      'an https photo URL, only when the request needs real photos; ' +
+      'otherwise leave it null and the half shows an illustration. ' +
+      'caption: an optional quote over it. ' +
+      illustrationHelp,
   },
 
   // --- Showcase ---
@@ -211,11 +219,16 @@ export const blockDefinitions = {
       device: z.enum(['browser', 'phone']),
       image: z.string().nullable(),
       url: z.string().nullable(),
+      illustration: z.enum(illustrationStyles).nullable(),
+      illustrationIcon: icon,
     }),
     description:
       'A product screenshot inside a browser window ("browser", with url ' +
       'in its address bar) or a phone ("phone"). For heroes and product ' +
-      'sections. image: an https screenshot or photo URL.',
+      'sections. Leave image null (a real screenshot URL is rarely ' +
+      'known): the screen then shows an illustration, "cards" (an ' +
+      'abstract app screen) unless another style fits. ' +
+      illustrationHelp,
   },
   Terminal: {
     props: styled({
@@ -437,6 +450,7 @@ export const blockDefinitions = {
           title: z.string().nullable(),
           description: z.string().nullable(),
           image: z.string().nullable(),
+          icon,
         }),
       ),
       autoplay: z.boolean().nullable(),
@@ -445,7 +459,8 @@ export const blockDefinitions = {
       'Row of slides (image and/or title and description): photos, ' +
       'products, features. autoplay true scrolls them endlessly on its ' +
       'own (pauses on hover); otherwise the visitor swipes or scrolls. ' +
-      'image is an https URL (e.g. from images.unsplash.com).',
+      'image: an https photo URL, only when real photos are needed; ' +
+      'without one, a slide shows a drawn illustration (with its icon).',
   },
   Marquee: {
     props: styled({

@@ -115,13 +115,16 @@ function wrapBareBlocks(spec: Spec) {
 // missing closing brackets, "op":"add":"path" (colon for a comma), a
 // markdown fence glued to the line ({…}```spec), and an element closed
 // too early: "props":{…}},{"children":[…]} instead of …},"children":[…],
-// and quotes inside text left unescaped: "Try the "Morning Blend"!"
+// quotes inside text left unescaped ("Try the "Morning Blend"!"), and a
+// value written twice: "value":"bg-grad":"bg-gradient-to-b …"
 export function fixLine(line: string): string {
   return closeBrackets(
     escapeStrayQuotes(line)
       .replace(/^\s*```\w*|```\w*\s*$/g, '')
       .replace(/^(\s*\{\s*"op"\s*:\s*"\w+"\s*):/, '$1,')
-      .replace(/\}\},\{"children":/, '},"children":'),
+      .replace(/\}\},\{"children":/, '},"children":')
+      // A stuttered value: "value":"bg-grad":"bg-gradient-to-b …"
+      .replace(/("value"\s*:\s*)"(?:[^"\\]|\\.)*"\s*:\s*(?=")/, '$1'),
   )
 }
 

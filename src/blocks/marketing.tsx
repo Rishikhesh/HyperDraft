@@ -67,6 +67,7 @@ export function FeatureGrid({ props }: PropsOf<'FeatureGrid'>) {
   const cards = items.map((item, index) => (
     <CardEffect
       key={index}
+      part={`items.${index}`}
       effect={props.cardEffect}
       className={cn(
         'flex flex-col gap-3 rounded-xl border bg-card p-6',
@@ -97,7 +98,11 @@ export function FeatureGrid({ props }: PropsOf<'FeatureGrid'>) {
         )}
       >
         {items.map((item, index) => (
-          <li key={index} className="flex gap-4 py-5">
+          <li
+            key={index}
+            data-sw-prop={`items.${index}`}
+            className="flex gap-4 py-5"
+          >
             {item.icon && (
               <span
                 className="flex size-10 shrink-0 items-center justify-center
@@ -152,6 +157,7 @@ export function PricingTable({ props }: PropsOf<'PricingTable'>) {
       {list(props.plans).map((plan, index) => (
         <CardEffect
           key={index}
+          part={`plans.${index}`}
           effect={props.cardEffect}
           className={cn(
             'relative flex flex-col gap-6 rounded-xl border bg-card p-6',
@@ -207,6 +213,7 @@ export function Testimonials({ props }: PropsOf<'Testimonials'>) {
   const cards = list(props.items).map((item, index) => (
     <CardEffect
       key={index}
+      part={`items.${index}`}
       effect={props.cardEffect}
       className={cn(
         'flex flex-col gap-4 rounded-xl border bg-card p-6',
@@ -238,6 +245,7 @@ export function Testimonials({ props }: PropsOf<'Testimonials'>) {
     // One big quote; the others' names underneath
     return (
       <figure
+        data-sw-prop="items.0"
         className={cn(
           'mx-auto flex max-w-3xl flex-col items-center gap-6 text-center',
           props.className,
@@ -293,6 +301,7 @@ export function Stats({ props }: PropsOf<'Stats'>) {
         {list(props.items).map((item, index) => (
           <div
             key={index}
+            data-sw-prop={`items.${index}`}
             className="flex flex-1 flex-col items-center gap-1 px-4"
           >
             <dd className="text-4xl font-bold tracking-tight">
@@ -314,6 +323,7 @@ export function Stats({ props }: PropsOf<'Stats'>) {
       {list(props.items).map((item, index) => (
         <CardEffect
           key={index}
+          part={`items.${index}`}
           effect={props.cardEffect}
           className={cn(
             'flex flex-col gap-1 rounded-xl border bg-card p-5',
@@ -383,11 +393,15 @@ export function CallToAction({ props }: PropsOf<'CallToAction'>) {
         props.className,
       )}
     >
-      <h2 className="text-3xl font-bold tracking-tight text-balance">
+      <h2
+        data-sw-prop="title"
+        className="text-3xl font-bold tracking-tight text-balance"
+      >
         {props.title}
       </h2>
       {props.subtitle && (
         <p
+          data-sw-prop="subtitle"
           className={cn(
             'max-w-xl',
             banner ? 'opacity-80' : 'text-muted-foreground',
@@ -422,6 +436,7 @@ export function LogoCloud({ props }: PropsOf<'LogoCloud'>) {
   const names = list(props.names).map((name, index) => (
     <span
       key={index}
+      data-sw-prop={`names.${index}`}
       className="text-lg font-semibold tracking-tight text-muted-foreground/70"
     >
       {name}
@@ -465,7 +480,11 @@ export function Steps({ props }: PropsOf<'Steps'>) {
       )}
     >
       {list(props.items).map((item, index) => (
-        <li key={index} className="flex flex-col gap-3">
+        <li
+          key={index}
+          data-sw-prop={`items.${index}`}
+          className="flex flex-col gap-3"
+        >
           <span
             className="flex size-9 items-center justify-center rounded-full
               bg-primary text-sm font-semibold text-primary-foreground"

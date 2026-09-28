@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import type { blockDefinitions } from './definitions'
 import { fontUrl, type FontName } from './fonts'
 import { TextEffect } from './effects'
+import { Illustration } from './illustration'
 import { list } from './safe'
 
 type Defs = typeof blockDefinitions
@@ -169,7 +170,9 @@ export function Navbar({ props }: PropsOf<'Navbar'>) {
       )}
     >
       <nav className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-6">
-        <span className="text-lg font-semibold">{props.brand}</span>
+        <span data-sw-prop="brand" className="text-lg font-semibold">
+          {props.brand}
+        </span>
         {/* Desktop: links inline */}
         <div className="ml-auto hidden items-center gap-6 md:flex">
           {links.map((link, index) => (
@@ -227,13 +230,17 @@ export function Hero({ props, children }: PropsOf<'Hero'>) {
     >
       {props.eyebrow && (
         <span
+          data-sw-prop="eyebrow"
           className="rounded-full border bg-background/60 px-3 py-1 text-xs
             font-medium text-muted-foreground"
         >
           {props.eyebrow}
         </span>
       )}
-      <h1 className="text-4xl font-bold tracking-tight text-balance md:text-6xl">
+      <h1
+        data-sw-prop="title"
+        className="text-4xl font-bold tracking-tight text-balance md:text-6xl"
+      >
         <TextEffect
           text={props.title}
           effect={props.titleEffect}
@@ -242,6 +249,7 @@ export function Hero({ props, children }: PropsOf<'Hero'>) {
       </h1>
       {props.subtitle && (
         <p
+          data-sw-prop="subtitle"
           className={cn(
             'max-w-2xl text-lg text-pretty',
             layout === 'background' ? 'text-white/80' : 'text-muted-foreground',
@@ -266,9 +274,16 @@ export function Hero({ props, children }: PropsOf<'Hero'>) {
       >
         {text}
         <div
-          className="relative aspect-4/3 overflow-hidden rounded-2xl border
-            bg-linear-to-br from-indigo-500/30 via-fuchsia-500/20 to-sky-500/30"
+          data-sw-prop="image"
+          className="relative aspect-4/3 overflow-hidden rounded-2xl border"
         >
+          {/* A drawn illustration, with the photo on top if there is one */}
+          <Illustration
+            style={props.illustration}
+            icon={props.illustrationIcon}
+            seed={props.title}
+            className="absolute inset-0"
+          />
           {image && (
             <img
               src={image}
@@ -291,14 +306,22 @@ export function Hero({ props, children }: PropsOf<'Hero'>) {
           props.className,
         )}
       >
-        {image && (
-          <img
-            src={image}
-            alt={props.imageAlt ?? ''}
-            className="absolute inset-0 -z-10 size-full object-cover"
-            onError={(event) => (event.currentTarget.hidden = true)}
+        <div data-sw-prop="image" className="absolute inset-0 -z-10">
+          <Illustration
+            style={props.illustration}
+            icon={null}
+            seed={props.title}
+            className="absolute inset-0"
           />
-        )}
+          {image && (
+            <img
+              src={image}
+              alt={props.imageAlt ?? ''}
+              className="absolute inset-0 size-full object-cover"
+              onError={(event) => (event.currentTarget.hidden = true)}
+            />
+          )}
+        </div>
         <div aria-hidden className="absolute inset-0 -z-10 bg-black/55" />
         <div className="max-w-4xl">{text}</div>
       </section>
@@ -340,7 +363,10 @@ export function Section({ props, children }: PropsOf<'Section'>) {
         {(props.title || props.subtitle) && (
           <div className="flex flex-col gap-2 text-center">
             {props.title && (
-              <h2 className="text-3xl font-bold tracking-tight">
+              <h2
+                data-sw-prop="title"
+                className="text-3xl font-bold tracking-tight"
+              >
                 <TextEffect
                   text={props.title}
                   effect={props.titleEffect}
@@ -349,7 +375,9 @@ export function Section({ props, children }: PropsOf<'Section'>) {
               </h2>
             )}
             {props.subtitle && (
-              <p className="text-muted-foreground">{props.subtitle}</p>
+              <p data-sw-prop="subtitle" className="text-muted-foreground">
+                {props.subtitle}
+              </p>
             )}
           </div>
         )}
@@ -372,8 +400,10 @@ export function Footer({ props }: PropsOf<'Footer'>) {
         className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-8 text-sm
           text-muted-foreground md:flex-row md:items-center"
       >
-        <span className="font-semibold text-foreground">{props.brand}</span>
-        {props.text && <span>{props.text}</span>}
+        <span data-sw-prop="brand" className="font-semibold text-foreground">
+          {props.brand}
+        </span>
+        {props.text && <span data-sw-prop="text">{props.text}</span>}
         <div className="flex flex-wrap gap-4 md:ml-auto">
           {list(props.links).map((link, index) => (
             <a key={index} href={link.href} className="hover:text-foreground">
@@ -398,19 +428,24 @@ export function Split({ props, children }: PropsOf<'Split'>) {
       )}
     >
       <div
+        data-sw-prop="image"
         className={cn(
           'relative h-48 overflow-hidden md:h-auto',
-          'bg-linear-to-br from-indigo-500/40 via-fuchsia-500/20',
-          'to-sky-500/30',
           imageRight && 'md:order-2',
         )}
       >
+        <Illustration
+          style={props.illustration}
+          icon={props.illustrationIcon}
+          seed={props.caption ?? props.imageAlt ?? 'split'}
+          className="absolute inset-0"
+        />
         {props.image && (
           <img
             src={props.image}
             alt={props.imageAlt ?? ''}
             className="absolute inset-0 size-full object-cover"
-            // A dead link leaves the gradient behind it instead
+            // A dead link leaves the illustration behind it instead
             onError={(event) => (event.currentTarget.hidden = true)}
           />
         )}

@@ -23,13 +23,19 @@ export async function generate(
   send: Send,
   signal: AbortSignal,
 ) {
-  const { message, spec, selectedId, mode, history } = request
+  const { message, spec, selectedId, selectedProp, mode, history } = request
   const started = performance.now()
   const elapsed = () => Math.round(performance.now() - started)
 
   // 1. Jev decides what this message is and what it touches
   send({ kind: 'step', text: 'Reading your request…' })
-  const decision = await decide(message, spec, selectedId, history)
+  const decision = await decide(
+    message,
+    spec,
+    selectedId,
+    history,
+    selectedProp,
+  )
   // The user's explicit choice beats Jev's guess. Editing needs
   // something to edit, so "edit" on an empty canvas means "create".
   if (mode === 'create' || (mode === 'edit' && !spec.root)) {
@@ -97,7 +103,9 @@ export async function generate(
     send({ kind: 'done', ...changes.result(), model, ms: elapsed() })
 
   // 2. Simple edits: code does them from Jev's answers, no LLM needed
-  if (await tryWithoutLlm(message, spec, decision, changes, send)) {
+  if (
+    await tryWithoutLlm(message, spec, decision, selectedProp, changes, send)
+  ) {
     return finish('jev')
   }
 
@@ -111,8 +119,8 @@ export async function generate(
     prompt: withHistory(
       history,
       scope
-        ? withScope(message, spec, scope, selectedId)
-        : withTarget(message, spec, decision, selectedId),
+        ? withScope(message, spec, scope, selectedId, selectedProp)
+        : withTarget(message, spec, decision, selectedId, selectedProp),
     ),
     // A scoped edit shows the LLM only what it may change
     currentSpec: scope
@@ -138,6 +146,7 @@ async function tryWithoutLlm(
   message: string,
   spec: Spec,
   decision: Decision,
+  selectedProp: string | null,
   changes: ReturnType<typeof tracker>,
   send: Send,
 ): Promise<boolean> {
@@ -153,6 +162,23 @@ async function tryWithoutLlm(
     edit.kindConfidence >= KIND_SURE &&
     edit.targetConfidence >= TARGET_SURE
   if (!sure) return false
+
+  // A clicked list item ("plans.1") is removed from its list directly
+  const [list, index] = selectedProp?.split('.') ?? []
+  const items = get(spec.elements, [edit.target, 'props', list])
+  if (
+    edit.kind === 'remove' &&
+    index !== undefined &&
+    Array.isArray(items) &&
+    Number(index) < items.length
+  ) {
+    send({ kind: 'step', text: `Removing it from ${label(edit.target)}` })
+    changes.apply({
+      op: 'remove',
+      path: `/elements/${edit.target}/props/${list}/${index}`,
+    })
+    return true
+  }
 
   // Deleting elements is for whole ones. Removing an item inside a
   // block ("the pro plan") means rewriting its list: the LLM does that.
@@ -236,9 +262,11 @@ function withScope(
   spec: Spec,
   scope: Set<string>,
   selectedId: string | null,
+  selectedProp: string | null,
 ) {
   const selected = selectedId
-    ? ` The user selected "${selectedId}"; "this" or "it" means it.`
+    ? ` The user selected ${partOf(selectedId, selectedProp)}; "this" or ` +
+      '"it" means it.'
     : ''
   return (
     `${message}
@@ -253,18 +281,30 @@ ${outline(spec)})`
 
 // Tell the LLM which element the request is about: the clicked one,
 // or Jev's pick if it is fairly sure
+// 'the "title" of "hero"', 'item 2 of "plans" of "pricing"', '"hero"'
+function partOf(id: string, prop: string | null): string {
+  if (!prop) return `"${id}"`
+  const [list, index] = prop.split('.')
+  return index === undefined
+    ? `the "${list}" of "${id}"`
+    : `item ${Number(index) + 1} of "${list}" of "${id}"`
+}
+
 function withTarget(
   message: string,
   spec: Spec,
   decision: Decision,
   selectedId: string | null,
+  selectedProp: string | null,
 ) {
   const edit = decision.edit
   const id =
     selectedId ?? (edit && edit.targetConfidence >= TARGET_SURE && edit.target)
   const element = id ? get(spec.elements, id) : undefined
   if (!id || !element) return message
-  const who = selectedId ? 'The user selected' : 'This most likely changes'
+  const who = selectedId
+    ? `The user selected ${partOf(id, selectedProp)}, in`
+    : 'This most likely changes'
   return (
     `${message}\n\n(${who} element "${id}", a ${element.type}. ` +
     `Words like "this" or "it" refer to that element. ` +

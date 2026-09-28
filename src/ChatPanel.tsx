@@ -32,7 +32,7 @@ export type ChatMessage = {
 type Props = {
   messages: ChatMessage[]
   busy: boolean
-  selection: { id: string; type: string } | null
+  selection: { id: string; type: string; part?: string | null } | null
   hint: string // shown when nothing is selected
   onClearSelection: () => void
   // Select the element around the selected one (null: it's the page)
@@ -95,7 +95,8 @@ export default function ChatPanel({
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
         {messages.length === 0 && (
           <p className="m-auto text-center text-sm text-muted-foreground">
-            Describe a UI, like “a pricing page with three plans”.
+            Describe a UI, like “Lets build a agentic AI product page with three
+            plans”.
           </p>
         )}
         {messages.map((message) => (
@@ -110,7 +111,10 @@ export default function ChatPanel({
           className="flex items-center gap-2 rounded-md bg-blue-500/10 px-2 py-1
             text-sm"
         >
-          <span className="font-medium">{selection.type}</span>
+          <span className="font-medium">
+            {selection.type}
+            {selection.part && ` › ${selection.part}`}
+          </span>
           <span className="text-muted-foreground">{selection.id}</span>
           {onSelectParent && (
             <Button

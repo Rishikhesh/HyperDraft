@@ -6,6 +6,8 @@ export type ChatRequest = {
   message: string
   spec: Spec
   selectedId: string | null
+  // A part of the selected element: "title", "plans.1"
+  selectedProp?: string | null
   // "auto": Jev decides. "create"/"edit": the user chose it.
   mode?: RequestMode
   // The user's earlier messages, oldest first, so "the bridge" or "add

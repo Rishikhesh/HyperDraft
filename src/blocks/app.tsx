@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import type { blockDefinitions } from './definitions'
 import { list } from './safe'
 import { Icon } from './icons'
+import { Illustration } from './illustration'
 import { marqueeFade } from './styles'
 
 type Defs = typeof blockDefinitions
@@ -75,15 +76,22 @@ export function Carousel({ props }: PropsOf<'Carousel'>) {
       className="flex w-72 shrink-0 snap-start flex-col overflow-hidden
         rounded-xl border bg-card"
     >
-      {item.image && (
-        <img
-          src={item.image}
-          alt={item.title ?? ''}
-          className="aspect-4/3 w-full object-cover"
-          // AI-written image URLs can be dead: hide instead of a broken icon
-          onError={(event) => (event.currentTarget.hidden = true)}
+      <div className="relative aspect-4/3 w-full">
+        <Illustration
+          icon={item.icon}
+          seed={item.title ?? String(index)}
+          className="absolute inset-0"
         />
-      )}
+        {item.image && (
+          <img
+            src={item.image}
+            alt={item.title ?? ''}
+            className="absolute inset-0 size-full object-cover"
+            // AI-written image URLs can be dead: hide instead of a broken icon
+            onError={(event) => (event.currentTarget.hidden = true)}
+          />
+        )}
+      </div>
       {(item.title || item.description) && (
         <figcaption className="flex flex-col gap-1 p-4">
           {item.title && <span className="font-semibold">{item.title}</span>}

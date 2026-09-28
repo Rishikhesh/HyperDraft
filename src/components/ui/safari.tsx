@@ -1,3 +1,4 @@
+import type React from 'react'
 import type { HTMLAttributes } from 'react'
 
 const SAFARI_WIDTH = 1203
@@ -16,6 +17,8 @@ const HEIGHT_PCT = (SCREEN_HEIGHT / SAFARI_HEIGHT) * 100
 type SafariMode = 'default' | 'simple'
 
 export interface SafariProps extends HTMLAttributes<HTMLDivElement> {
+  // Drawn in the screen when there is no image or video
+  screen?: React.ReactNode
   url?: string
   imageSrc?: string
   videoSrc?: string
@@ -23,6 +26,7 @@ export interface SafariProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function Safari({
+  screen,
   imageSrc,
   videoSrc,
   url,
@@ -32,7 +36,7 @@ export function Safari({
   ...props
 }: SafariProps) {
   const hasVideo = !!videoSrc
-  const hasMedia = hasVideo || !!imageSrc
+  const hasMedia = hasVideo || !!imageSrc || !!screen
 
   return (
     <div
@@ -84,6 +88,21 @@ export function Safari({
             // A dead link leaves an empty screen, not a broken icon
             onError={(event) => (event.currentTarget.hidden = true)}
           />
+        </div>
+      )}
+
+      {!hasVideo && !imageSrc && screen && (
+        <div
+          className="pointer-events-none absolute z-0 overflow-hidden"
+          style={{
+            left: `${LEFT_PCT}%`,
+            top: `${TOP_PCT}%`,
+            width: `${WIDTH_PCT}%`,
+            height: `${HEIGHT_PCT}%`,
+            borderRadius: '0 0 11px 11px',
+          }}
+        >
+          {screen}
         </div>
       )}
 

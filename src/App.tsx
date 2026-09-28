@@ -76,8 +76,14 @@ export default function App() {
   const [mode, setMode] = useState<Mode>('edit')
 
   // The clicked element. Ignored if it no longer exists (e.g. after undo).
-  const [clickedId, setClickedId] = useState<string | null>(null)
-  const selectedId = clickedId && spec.elements[clickedId] ? clickedId : null
+  const [clicked, setClicked] = useState<{
+    id: string
+    prop: string | null // a part of it: "title", "plans.1"
+  } | null>(null)
+  const select = (id: string | null, prop: string | null = null) =>
+    setClicked(id ? { id, prop } : null)
+  const selectedId = clicked && spec.elements[clicked.id] ? clicked.id : null
+  const selectedProp = selectedId ? (clicked?.prop ?? null) : null
   // The element around the selection, for the "select parent" button
   const parentId = selectedId
     ? (findKey(spec.elements, (element) =>
@@ -125,7 +131,7 @@ export default function App() {
 
   function changeMode(next: Mode) {
     setMode(next)
-    setClickedId(null) // selecting only makes sense in edit mode
+    select(null) // selecting only makes sense in edit mode
   }
 
   function stop() {
@@ -141,7 +147,7 @@ export default function App() {
     setHistory([emptySpec])
     setMessages([])
     setDraft(null)
-    setClickedId(null)
+    select(null)
   }
 
   // Downloads the current UI as JSON. json-render's Renderer can show it
@@ -266,7 +272,14 @@ export default function App() {
 
     try {
       await streamChat(
-        { message: text, spec, selectedId, mode: requestMode, history },
+        {
+          message: text,
+          spec,
+          selectedId,
+          selectedProp,
+          mode: requestMode,
+          history,
+        },
         onEvent,
         controller.signal,
       )
@@ -308,6 +321,7 @@ export default function App() {
         designId: shownDesign,
         mode,
         selectedId,
+        selectedProp,
         theme,
         busy,
       }
@@ -322,7 +336,9 @@ export default function App() {
       if (event.data?.type === 'ready') sendRender()
 
       // User clicked something in the preview (edit mode only)
-      if (event.data?.type === 'select') setClickedId(event.data.id)
+      if (event.data?.type === 'select') {
+        select(event.data.id, event.data.prop ?? null)
+      }
     }
     window.addEventListener('message', onMessage)
 
@@ -330,7 +346,7 @@ export default function App() {
     sendRender()
 
     return () => window.removeEventListener('message', onMessage)
-  }, [shownSpec, shownDesign, mode, selectedId, theme, busy])
+  }, [shownSpec, shownDesign, mode, selectedId, selectedProp, theme, busy])
 
   return (
     // Phones: preview on top, chat below. Wider: chat on the left.
@@ -341,7 +357,11 @@ export default function App() {
         busy={busy}
         selection={
           selectedId
-            ? { id: selectedId, type: spec.elements[selectedId].type }
+            ? {
+                id: selectedId,
+                type: spec.elements[selectedId].type,
+                part: selectedProp && partLabel(selectedProp),
+              }
             : null
         }
         hint={
@@ -349,11 +369,14 @@ export default function App() {
             ? 'Click an element in the preview to select it.'
             : 'Switch to Edit to select an element.'
         }
-        onClearSelection={() => setClickedId(null)}
+        onClearSelection={() => select(null)}
         onSelectParent={
-          parentId && parentId !== spec.root
-            ? () => setClickedId(parentId)
-            : null
+          // From a part to its element, then up to the element around it
+          selectedProp
+            ? () => select(selectedId)
+            : parentId && parentId !== spec.root
+              ? () => select(parentId)
+              : null
         }
         onSend={send}
         onStop={stop}
@@ -459,4 +482,12 @@ function isElementPath(path: string) {
 
 function seconds(ms: number) {
   return `${(ms / 1000).toFixed(1)}s`
+}
+
+// "plans.1" → "plan 2", "title" → "title"
+function partLabel(prop: string): string {
+  const [list, index] = prop.split('.')
+  if (index === undefined) return list
+  const one = list.endsWith('s') ? list.slice(0, -1) : list
+  return `${one === 'item' ? 'item' : one} ${Number(index) + 1}`
 }

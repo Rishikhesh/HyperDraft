@@ -42,6 +42,14 @@ export const designRules = [
   'Glass / frosted look: Page surface "glass" over background "aurora" ' +
     'or "gradient". For a single element: className "bg-background/40 ' +
     'backdrop-blur-xl border border-foreground/10 shadow-xl".',
+  'Prefer illustrations to photos: leave image props null and choose ' +
+    'an illustration style (and icon) that fits the subject. Use photo ' +
+    'URLs only when the request is about real photos (a portfolio, a ' +
+    "restaurant's dishes, a hotel's rooms).",
+  'Colors named in a design direction ("obsidian", "terracotta", ' +
+    '"sage") describe a mood; they are not class names. In className use ' +
+    "only Tailwind's own colors (indigo-500, amber-300, stone-900…) or " +
+    'the theme colors below; invented names like from-obsidian do nothing.',
   'Never use fixed surface colors like bg-white, bg-black, bg-gray-50 or ' +
     'text-black: they break dark mode. Use theme classes instead: ' +
     'bg-background, bg-card, bg-muted, bg-primary/10, text-foreground, ' +

@@ -56,8 +56,15 @@ export default function Preview() {
     const target = event.target as Element
     const wrapper = target.closest('[data-jr-key]')
     const id = wrapper?.getAttribute('data-jr-key') ?? null
+    // Blocks mark the parts drawn from their props (a title, one plan)
+    // with data-sw-prop; a click on one selects just that part
+    const part = target.closest('[data-sw-prop]')
+    const prop =
+      part && part.closest('[data-jr-key]') === wrapper
+        ? part.getAttribute('data-sw-prop')
+        : null
 
-    const message: ElementSelected = { type: 'select', id }
+    const message: ElementSelected = { type: 'select', id, prop }
     window.parent.postMessage(message, location.origin)
   }
 
@@ -71,7 +78,7 @@ export default function Preview() {
       onPointerDownCapture={blockInEditMode}
     >
       {isEditing && view.selectedId && (
-        <SelectionOutline id={view.selectedId} />
+        <SelectionOutline id={view.selectedId} prop={view.selectedProp} />
       )}
       {view?.busy && view.spec.root && <ProgressBar />}
       <Toaster /> {/* for Buttons with a "toast" message */}
@@ -104,8 +111,11 @@ export default function Preview() {
 
 // Outlines the selected element. The wrapper span takes no space
 // (display: contents), so we outline the element inside it.
-function SelectionOutline({ id }: { id: string }) {
-  const selector = `[data-jr-key="${CSS.escape(id)}"] > *`
+function SelectionOutline({ id, prop }: { id: string; prop: string | null }) {
+  const element = `[data-jr-key="${CSS.escape(id)}"]`
+  const selector = prop
+    ? `${element} [data-sw-prop="${CSS.escape(prop)}"]`
+    : `${element} > *`
   const css = `${selector} { outline: 2px solid #3b82f6; outline-offset: 2px; }`
   return <style>{css}</style>
 }

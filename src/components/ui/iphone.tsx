@@ -1,3 +1,4 @@
+import type React from 'react'
 import type { HTMLAttributes } from 'react'
 
 const PHONE_WIDTH = 433
@@ -17,11 +18,14 @@ const RADIUS_H = (SCREEN_RADIUS / SCREEN_WIDTH) * 100
 const RADIUS_V = (SCREEN_RADIUS / SCREEN_HEIGHT) * 100
 
 export interface IphoneProps extends HTMLAttributes<HTMLDivElement> {
+  // Drawn in the screen when there is no image or video
+  screen?: React.ReactNode
   src?: string
   videoSrc?: string
 }
 
 export function Iphone({
+  screen,
   src,
   videoSrc,
   className,
@@ -29,7 +33,7 @@ export function Iphone({
   ...props
 }: IphoneProps) {
   const hasVideo = !!videoSrc
-  const hasMedia = hasVideo || !!src
+  const hasMedia = hasVideo || !!src || !!screen
 
   return (
     <div
@@ -82,6 +86,21 @@ export function Iphone({
             // A dead link leaves an empty screen, not a broken icon
             onError={(event) => (event.currentTarget.hidden = true)}
           />
+        </div>
+      )}
+
+      {!hasVideo && !src && screen && (
+        <div
+          className="pointer-events-none absolute z-0 overflow-hidden"
+          style={{
+            left: `${LEFT_PCT}%`,
+            top: `${TOP_PCT}%`,
+            width: `${WIDTH_PCT}%`,
+            height: `${HEIGHT_PCT}%`,
+            borderRadius: `${RADIUS_H}% / ${RADIUS_V}%`,
+          }}
+        >
+          {screen}
         </div>
       )}
 

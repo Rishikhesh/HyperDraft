@@ -14,6 +14,8 @@ export type Render = {
   designId: number // changes only when a different design is shown
   mode: Mode
   selectedId: string | null
+  // A part of the selected element: "title", "plans.1" (a list item)
+  selectedProp: string | null
   theme: Theme
   busy: boolean // the AI is working: show progress
 }
@@ -22,7 +24,11 @@ export type Render = {
 export type PreviewReady = { type: 'ready' }
 
 // preview → app: "the user clicked this element" (null = empty space)
-export type ElementSelected = { type: 'select'; id: string | null }
+export type ElementSelected = {
+  type: 'select'
+  id: string | null
+  prop: string | null // the clicked part of it, if the block marks one
+}
 
 // Everything the preview can send, so the app can handle them in one place
 export type PreviewMessage = PreviewReady | ElementSelected

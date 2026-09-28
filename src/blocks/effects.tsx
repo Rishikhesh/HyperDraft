@@ -117,23 +117,26 @@ export type CardEffectName = 'none' | 'beam' | 'shine' | 'neon' | 'glare'
 export function CardEffect({
   effect,
   className,
+  part,
   children,
 }: {
   effect: CardEffectName | null | undefined
   className?: string
+  part?: string // data-sw-prop: this card is one item, selectable alone
   children: ReactNode
 }) {
+  const tag = part ? { 'data-sw-prop': part } : {}
   switch (effect) {
     case 'beam':
       return (
-        <div className={cn('relative overflow-hidden', className)}>
+        <div {...tag} className={cn('relative overflow-hidden', className)}>
           {children}
           <BorderBeam size={80} duration={8} />
         </div>
       )
     case 'shine':
       return (
-        <div className={cn('relative overflow-hidden', className)}>
+        <div {...tag} className={cn('relative overflow-hidden', className)}>
           {children}
           <ShineBorder shineColor={['#6366f1', '#d946ef', '#38bdf8']} />
         </div>
@@ -143,6 +146,7 @@ export function CardEffect({
       // the card's layout
       return (
         <NeonGradientCard
+          {...tag}
           className="h-full"
           borderSize={2}
           borderRadius={12}
@@ -158,6 +162,7 @@ export function CardEffect({
     case 'glare':
       return (
         <GlareHover
+          {...tag}
           className={cn(className, 'place-items-stretch')}
           width="100%"
           height="100%"
@@ -168,6 +173,10 @@ export function CardEffect({
         </GlareHover>
       )
     default:
-      return <div className={className}>{children}</div>
+      return (
+        <div {...tag} className={className}>
+          {children}
+        </div>
+      )
   }
 }

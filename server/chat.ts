@@ -39,7 +39,14 @@ export async function chat(request: Request, ip?: string): Promise<Response> {
   const body = (await request.json().catch(() => null)) as ChatRequest | null
   const problem = checkRequest(body)
   if (problem) return Response.json({ error: problem }, { status: 400 })
-  const { message, spec, selectedId, mode = 'auto', history = [] } = body!
+  const {
+    message,
+    spec,
+    selectedId,
+    selectedProp = null,
+    mode = 'auto',
+    history = [],
+  } = body!
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
@@ -48,7 +55,7 @@ export async function chat(request: Request, ip?: string): Promise<Response> {
         controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'))
       try {
         await generate(
-          { message, spec, selectedId, mode, history },
+          { message, spec, selectedId, selectedProp, mode, history },
           send,
           request.signal,
         )
@@ -97,6 +104,14 @@ function checkRequest(body: ChatRequest | null): string | null {
   if (bad) return 'spec is invalid'
   if (body.selectedId !== null && !isString(body.selectedId)) {
     return 'selectedId is invalid'
+  }
+  // A part of it: a prop name, or a list prop and index ("plans.1")
+  const { selectedProp } = body
+  if (
+    selectedProp != null &&
+    !/^[a-zA-Z]{1,40}(\.\d{1,3})?$/.test(String(selectedProp))
+  ) {
+    return 'selectedProp is invalid'
   }
   if (!includes([undefined, 'auto', 'create', 'edit'], body.mode)) {
     return 'mode is invalid'

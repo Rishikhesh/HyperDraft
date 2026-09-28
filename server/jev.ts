@@ -128,6 +128,7 @@ export async function decide(
   spec: Spec,
   selectedId: string | null,
   history: string[] = [],
+  selectedProp: string | null = null, // a part of it: "title", "plans.1"
 ): Promise<Decision> {
   const isEmpty = keys(spec.elements).length === 0
 
@@ -189,9 +190,13 @@ export async function decide(
   )
   const optionQs = Object.fromEntries(
     candidates.flatMap((id, index) =>
-      toPairs(optionQuestions(id, spec.elements[id])).map(
-        ([prop, question]) => [`option_${index}_${prop}`, question],
-      ),
+      toPairs(
+        optionQuestions(
+          id,
+          spec.elements[id],
+          id === selectedId ? partOptions(selectedProp) : null,
+        ),
+      ).map(([prop, question]) => [`option_${index}_${prop}`, question]),
     ),
   )
 
@@ -200,7 +205,11 @@ export async function decide(
       request: message,
       option_help: optionHelp(candidates.map((id) => spec.elements[id])),
       current_ui: isEmpty ? 'nothing yet' : outline(spec),
-      selected_element: selectedId ?? 'none',
+      selected_element: selectedId
+        ? selectedProp
+          ? `${selectedId}, just its ${selectedProp}`
+          : selectedId
+        : 'none',
       // What "the bridge" or "it" means often comes from earlier
       earlier_requests: history.length ? history.join('\n') : 'none',
     },
@@ -241,7 +250,11 @@ export async function decide(
       changedProps(
         spec.elements[id],
         mapValues(
-          optionQuestions(id, spec.elements[id]),
+          optionQuestions(
+            id,
+            spec.elements[id],
+            id === selectedId ? partOptions(selectedProp) : null,
+          ),
           (_, key) => answered[`option_${index}_${key}`]?.choice,
         ),
       ),
@@ -282,12 +295,15 @@ export async function decide(
               (index) => answered[`touches_${index}`]?.noul,
               spec.root,
             ),
-        part: clearPart(
-          answers.part.choice,
-          selectedId,
-          String(answers.target.choice),
-          answers.target.confidence,
-        ),
+        // A clicked part (a title, one plan) is part of the element
+        part: selectedProp
+          ? 'item'
+          : clearPart(
+              answers.part.choice,
+              selectedId,
+              String(answers.target.choice),
+              answers.target.confidence,
+            ),
       }
 
   return { intent, pageType, scope, components, edit, options }
@@ -337,9 +353,14 @@ export async function decideProps(
 // once for the element, not per prop: a prop the request isn't about
 // would otherwise answer "none fit" and block a good edit.
 const FIT = 'options_fit'
-function optionQuestions(id: string, element: UIElement) {
+function optionQuestions(
+  id: string,
+  element: UIElement,
+  only: string[] | null = null, // just these options (a selected part)
+) {
+  const options = optionProps(element.type)
   return {
-    ...mapValues(optionProps(element.type), (values, prop) =>
+    ...mapValues(only ? pick(options, only) : options, (values, prop) =>
       choice(
         `After applying \`request\`, what is "${prop}" of element ` +
           `"${id}" (a ${element.type})? \`option_help\` explains the values.`,
@@ -361,6 +382,17 @@ function optionQuestions(id: string, element: UIElement) {
       },
     ),
   }
+}
+
+// A selected part only changes its own options: with the picture
+// selected, "make this orbit" must not also re-layout the whole Hero
+const PART_OPTIONS: Record<string, string[]> = {
+  image: ['illustration', 'illustrationIcon', 'imageSide'],
+  title: ['titleEffect', 'words'],
+}
+function partOptions(prop: string | null): string[] | null {
+  if (!prop) return null
+  return PART_OPTIONS[prop] ?? []
 }
 
 // What option values mean ("meteors" = shooting stars) lives in the
