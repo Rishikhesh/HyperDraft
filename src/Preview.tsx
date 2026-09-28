@@ -3,6 +3,7 @@ import { useEffect, useState, type SyntheticEvent } from 'react'
 import { markDevtoolsActive } from '@json-render/core'
 import { get, isPlainObject } from 'lodash-es'
 import { JSONUIProvider, Renderer } from '@json-render/react'
+import { Toaster } from '@/components/ui/sonner'
 import ErrorBoundary from '@/ErrorBoundary'
 import type { ElementSelected, PreviewReady, Render } from '@/messages'
 import { registry } from '@/registry'
@@ -73,6 +74,7 @@ export default function Preview() {
         <SelectionOutline id={view.selectedId} />
       )}
       {view?.busy && view.spec.root && <ProgressBar />}
+      <Toaster /> {/* for Buttons with a "toast" message */}
       {view?.spec.root ? (
         <ErrorBoundary resetKey={view.spec}>
           {/* The spec's starting data (e.g. which tab is active). Without

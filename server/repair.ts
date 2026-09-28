@@ -1,6 +1,16 @@
 // Fixes common, harmless model slips before the spec is checked.
-import type { Spec } from '@json-render/core'
-import { get, includes, isArray, isPlainObject } from 'lodash-es'
+import type { Spec, UIElement } from '@json-render/core'
+import {
+  get,
+  includes,
+  isArray,
+  isEqual,
+  isPlainObject,
+  keys,
+  set,
+} from 'lodash-es'
+import type { z } from 'zod'
+import { componentDefinitions } from '../src/catalog'
 
 // Blocks meant to sit inside a Section (for padding and width). Put
 // directly in the Page, they touch the screen edges.
@@ -33,7 +43,54 @@ export function repair(spec: Spec) {
     if (element.type === 'TabbedContent' && isArray(tabs)) {
       element.props.tabs = tabs.slice(0, element.children.length)
     }
+    fixProps(element)
+    listAsContainer(element)
   }
+}
+
+// A block that draws its own lists (List, FeatureGrid…) ignores
+// children. Models sometimes use one as a container anyway: children
+// and no items. Then it becomes a Stack, so the children show.
+function listAsContainer(element: UIElement) {
+  const definition = get(componentDefinitions, element.type)
+  if (!definition || definition.slots || !element.children?.length) return
+  const shape = (definition.props as z.ZodObject).shape
+  const lists = keys(shape).filter((prop) => shape[prop].safeParse([]).success)
+  const empty = lists.every((prop) => !get(element.props, [prop, 'length']))
+  if (!lists.length || !empty) return
+  element.type = 'Stack'
+  element.props = {
+    direction: 'vertical',
+    gap: 'md',
+    className: get(element.props, 'className') ?? null,
+  }
+}
+
+// The spec check only looks at structure, not props, so an invented
+// value (variant "outline" on a Button without one, an icon we don't
+// have inside a feature item) would slip through and render wrong.
+// Invalid values that may be null are reset to null (the default);
+// anything else is left for the component to handle.
+function fixProps(element: UIElement) {
+  const schema = get(componentDefinitions, [element.type, 'props']) as
+    z.ZodType | undefined
+  if (!schema) return
+  const invalid = (path: PropertyKey[]) =>
+    schema
+      .safeParse(element.props)
+      .error?.issues.some((issue) => isEqual(issue.path, path)) ?? false
+  const issues = schema.safeParse(element.props).error?.issues ?? []
+  for (const { path } of issues) {
+    if (!path.length || isBinding(get(element.props, path[0]))) continue
+    const value = get(element.props, path)
+    set(element.props, path, null)
+    if (invalid(path)) set(element.props, path, value) // null not allowed
+  }
+}
+
+// {"$state": …}, {"$cond": …}: json-render fills these in at render time
+function isBinding(value: unknown): boolean {
+  return isPlainObject(value) && keys(value).some((k) => k.startsWith('$'))
 }
 
 // Page > PricingTable becomes Page > Section > PricingTable
@@ -55,9 +112,56 @@ function wrapBareBlocks(spec: Spec) {
 }
 
 // Fixes the mistakes models make in patch lines, so they can be read:
-// missing closing brackets, and "op":"add":"path" (colon for a comma)
+// missing closing brackets, "op":"add":"path" (colon for a comma), a
+// markdown fence glued to the line ({…}```spec), and an element closed
+// too early: "props":{…}},{"children":[…]} instead of …},"children":[…],
+// and quotes inside text left unescaped: "Try the "Morning Blend"!"
 export function fixLine(line: string): string {
-  return closeBrackets(line.replace(/^(\s*\{\s*"op"\s*:\s*"\w+"\s*):/, '$1,'))
+  return closeBrackets(
+    escapeStrayQuotes(line)
+      .replace(/^\s*```\w*|```\w*\s*$/g, '')
+      .replace(/^(\s*\{\s*"op"\s*:\s*"\w+"\s*):/, '$1,')
+      .replace(/\}\},\{"children":/, '},"children":'),
+  )
+}
+
+// A quote inside a string ends it only if JSON can continue there: a
+// comma, colon or closing bracket, and after a comma another value or
+// key. Otherwise it's a quote in the text ("Try the "Morning Blend"")
+// and gets escaped. Lines that are valid JSON are left untouched.
+export function escapeStrayQuotes(line: string): string {
+  try {
+    JSON.parse(line)
+    return line
+  } catch {
+    // fall through: look for stray quotes
+  }
+  let out = ''
+  let inString = false
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    if (inString && char === '\\') {
+      out += char + (line[++i] ?? '')
+      continue
+    }
+    if (char === '"') {
+      if (inString && !endsString(line, i + 1)) {
+        out += '\\"' // a quote in the text
+        continue
+      }
+      inString = !inString
+    }
+    out += char
+  }
+  return out
+}
+
+// Can JSON continue at `at` after a closing quote?
+function endsString(line: string, at: number): boolean {
+  const rest = line.slice(at).trimStart()
+  if (!rest || /^[:}\]]/.test(rest)) return true
+  // After a comma comes a key or a value, not plain words
+  return /^,\s*["{[\d\-tfn]/.test(rest)
 }
 
 // Models often end a long JSON line one or two brackets short:

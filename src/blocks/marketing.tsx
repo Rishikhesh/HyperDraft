@@ -1,13 +1,22 @@
 // Landing-page sections. They look designed out of the box, so the AI
 // only supplies the content.
 import type { BaseComponentProps } from '@json-render/react'
-import { CheckIcon, TrendingDownIcon, TrendingUpIcon } from 'lucide-react'
+import {
+  CheckIcon,
+  QuoteIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+} from 'lucide-react'
+import { uniq } from 'lodash-es'
 import type { z } from 'zod'
 import { Button } from '@/components/ui/button'
+import { BentoGrid } from '@/components/ui/bento-grid'
 import { Marquee } from '@/components/ui/marquee'
+import { NumberTicker } from '@/components/ui/number-ticker'
 import { cn } from '@/lib/utils'
 import type { blockDefinitions } from './definitions'
 import { list, text } from './safe'
+import { CardEffect } from './effects'
 import { Icon } from './icons'
 import { marqueeFade } from './styles'
 
@@ -35,7 +44,88 @@ const columnClasses = {
   '4': 'md:grid-cols-2 lg:grid-cols-4',
 }
 
+// Bento: tile widths (out of 3 columns) repeat 2-1, 1-2; the last tile
+// stretches to fill its row
+function bentoSpans(count: number): number[] {
+  const spans: number[] = []
+  let used = 0
+  for (let i = 0; i < count; i++) {
+    const span = [2, 1, 1, 2][i % 4]
+    if (used + span > 3) used = 0
+    spans.push(span)
+    used = (used + span) % 3
+  }
+  if (spans.length && used) spans[spans.length - 1] += 3 - used
+  return spans
+}
+const spanClasses = ['', 'md:col-span-1', 'md:col-span-2', 'md:col-span-3']
+
 export function FeatureGrid({ props }: PropsOf<'FeatureGrid'>) {
+  const items = list(props.items)
+  const bento = props.layout === 'bento'
+  const spans = bentoSpans(items.length)
+  const cards = items.map((item, index) => (
+    <CardEffect
+      key={index}
+      effect={props.cardEffect}
+      className={cn(
+        'flex flex-col gap-3 rounded-xl border bg-card p-6',
+        bento && 'col-span-3 justify-end',
+        bento && spanClasses[spans[index]],
+        hoverOf(props.hover),
+      )}
+    >
+      {item.icon && (
+        <span
+          className="flex size-10 items-center justify-center rounded-lg
+            bg-primary/10 text-primary"
+        >
+          <Icon name={item.icon} className="size-5" />
+        </span>
+      )}
+      <h3 className="font-semibold">{item.title}</h3>
+      <p className="text-sm text-muted-foreground">{item.description}</p>
+    </CardEffect>
+  ))
+  if (props.layout === 'list') {
+    // Compact rows: icon beside title and description
+    return (
+      <ul
+        className={cn(
+          'mx-auto flex w-full max-w-3xl flex-col divide-y',
+          props.className,
+        )}
+      >
+        {items.map((item, index) => (
+          <li key={index} className="flex gap-4 py-5">
+            {item.icon && (
+              <span
+                className="flex size-10 shrink-0 items-center justify-center
+                  rounded-lg bg-primary/10 text-primary"
+              >
+                <Icon name={item.icon} className="size-5" />
+              </span>
+            )}
+            <span className="flex flex-col gap-1">
+              <span className="font-semibold">{item.title}</span>
+              <span className="text-sm text-muted-foreground">
+                {item.description}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  if (bento) {
+    return (
+      <BentoGrid
+        className={cn('auto-rows-[minmax(11rem,auto)]', props.className)}
+      >
+        {cards}
+      </BentoGrid>
+    )
+  }
   return (
     <div
       className={cn(
@@ -44,31 +134,13 @@ export function FeatureGrid({ props }: PropsOf<'FeatureGrid'>) {
         props.className,
       )}
     >
-      {list(props.items).map((item, index) => (
-        <div
-          key={index}
-          className={cn(
-            'flex flex-col gap-3 rounded-xl border bg-card p-6',
-            hoverOf(props.hover),
-          )}
-        >
-          {item.icon && (
-            <span
-              className="flex size-10 items-center justify-center rounded-lg
-                bg-primary/10 text-primary"
-            >
-              <Icon name={item.icon} className="size-5" />
-            </span>
-          )}
-          <h3 className="font-semibold">{item.title}</h3>
-          <p className="text-sm text-muted-foreground">{item.description}</p>
-        </div>
-      ))}
+      {cards}
     </div>
   )
 }
 
 export function PricingTable({ props }: PropsOf<'PricingTable'>) {
+  if (props.layout === 'comparison') return <PricingComparison {...props} />
   return (
     <div
       className={cn(
@@ -78,8 +150,9 @@ export function PricingTable({ props }: PropsOf<'PricingTable'>) {
       )}
     >
       {list(props.plans).map((plan, index) => (
-        <div
+        <CardEffect
           key={index}
+          effect={props.cardEffect}
           className={cn(
             'relative flex flex-col gap-6 rounded-xl border bg-card p-6',
             hoverOf(props.hover),
@@ -88,7 +161,7 @@ export function PricingTable({ props }: PropsOf<'PricingTable'>) {
         >
           {plan.highlighted && (
             <span
-              className="absolute -top-3 left-6 rounded-full bg-primary px-3
+              className="absolute top-5 right-5 rounded-full bg-primary px-3
                 py-0.5 text-xs font-medium text-primary-foreground"
             >
               Most popular
@@ -123,7 +196,7 @@ export function PricingTable({ props }: PropsOf<'PricingTable'>) {
           <Button variant={plan.highlighted ? 'default' : 'outline'}>
             {plan.cta}
           </Button>
-        </div>
+        </CardEffect>
       ))}
     </div>
   )
@@ -132,8 +205,9 @@ export function PricingTable({ props }: PropsOf<'PricingTable'>) {
 export function Testimonials({ props }: PropsOf<'Testimonials'>) {
   const scrolling = props.layout === 'marquee'
   const cards = list(props.items).map((item, index) => (
-    <figure
+    <CardEffect
       key={index}
+      effect={props.cardEffect}
       className={cn(
         'flex flex-col gap-4 rounded-xl border bg-card p-6',
         scrolling && 'w-80 shrink-0',
@@ -157,8 +231,33 @@ export function Testimonials({ props }: PropsOf<'Testimonials'>) {
           )}
         </span>
       </figcaption>
-    </figure>
+    </CardEffect>
   ))
+  const [first] = list(props.items)
+  if (props.layout === 'spotlight' && first) {
+    // One big quote; the others' names underneath
+    return (
+      <figure
+        className={cn(
+          'mx-auto flex max-w-3xl flex-col items-center gap-6 text-center',
+          props.className,
+        )}
+      >
+        <QuoteIcon className="size-10 text-primary/40" />
+        <blockquote
+          className="text-2xl leading-snug font-medium text-balance md:text-3xl"
+        >
+          {first.quote}
+        </blockquote>
+        <figcaption className="text-sm">
+          <span className="font-semibold">{first.name}</span>
+          {first.role && (
+            <span className="text-muted-foreground"> · {first.role}</span>
+          )}
+        </figcaption>
+      </figure>
+    )
+  }
   if (scrolling) {
     return (
       <Marquee
@@ -182,6 +281,29 @@ export function Testimonials({ props }: PropsOf<'Testimonials'>) {
 }
 
 export function Stats({ props }: PropsOf<'Stats'>) {
+  if (props.layout === 'inline') {
+    // Big numbers in a row, split by thin lines; no boxes
+    return (
+      <dl
+        className={cn(
+          'grid w-full grid-cols-2 gap-y-8 md:flex md:divide-x',
+          props.className,
+        )}
+      >
+        {list(props.items).map((item, index) => (
+          <div
+            key={index}
+            className="flex flex-1 flex-col items-center gap-1 px-4"
+          >
+            <dd className="text-4xl font-bold tracking-tight">
+              {props.countUp ? <CountUp value={item.value} /> : item.value}
+            </dd>
+            <dt className="text-sm text-muted-foreground">{item.label}</dt>
+          </div>
+        ))}
+      </dl>
+    )
+  }
   return (
     <div
       className={cn(
@@ -190,8 +312,9 @@ export function Stats({ props }: PropsOf<'Stats'>) {
       )}
     >
       {list(props.items).map((item, index) => (
-        <div
+        <CardEffect
           key={index}
+          effect={props.cardEffect}
           className={cn(
             'flex flex-col gap-1 rounded-xl border bg-card p-5',
             hoverOf(props.hover),
@@ -199,7 +322,7 @@ export function Stats({ props }: PropsOf<'Stats'>) {
         >
           <span className="text-sm text-muted-foreground">{item.label}</span>
           <span className="text-2xl font-bold tracking-tight">
-            {item.value}
+            {props.countUp ? <CountUp value={item.value} /> : item.value}
           </span>
           {item.change && (
             <span
@@ -216,18 +339,47 @@ export function Stats({ props }: PropsOf<'Stats'>) {
               {item.change}
             </span>
           )}
-        </div>
+        </CardEffect>
       ))}
     </div>
   )
 }
 
+// "$48,210" → "$" + a ticker counting to 48210 + "". Values that aren't
+// a number ("Unlimited") are shown as they are.
+function CountUp({ value }: { value: string }) {
+  const match = /^(\D*?)(\d[\d,]*(?:\.\d+)?)(.*)$/.exec(text(value))
+  if (!match) return value
+  const [, prefix, digits, suffix] = match
+  const decimals = digits.split('.')[1]?.length ?? 0
+  return (
+    <>
+      {prefix}
+      <NumberTicker
+        value={Number(digits.replaceAll(',', ''))}
+        decimalPlaces={decimals}
+        className="tracking-tight text-foreground"
+      />
+      {suffix}
+    </>
+  )
+}
+
+const ctaLayouts = {
+  banner: 'bg-primary text-primary-foreground',
+  card: 'border bg-card text-card-foreground',
+  minimal: 'bg-transparent',
+}
+
 export function CallToAction({ props }: PropsOf<'CallToAction'>) {
+  const layout = props.layout ?? 'banner'
+  const banner = layout === 'banner'
   return (
     <div
       className={cn(
-        `flex w-full flex-col items-center gap-4 rounded-2xl bg-primary px-6
-        py-14 text-center text-primary-foreground`,
+        'flex w-full flex-col items-center gap-4 rounded-2xl px-6 py-14',
+        'text-center',
+        ctaLayouts[layout],
         props.className,
       )}
     >
@@ -235,18 +387,28 @@ export function CallToAction({ props }: PropsOf<'CallToAction'>) {
         {props.title}
       </h2>
       {props.subtitle && (
-        <p className="max-w-xl opacity-80">{props.subtitle}</p>
+        <p
+          className={cn(
+            'max-w-xl',
+            banner ? 'opacity-80' : 'text-muted-foreground',
+          )}
+        >
+          {props.subtitle}
+        </p>
       )}
       <div className="mt-2 flex flex-wrap justify-center gap-3">
-        <Button variant="secondary" size="lg">
+        <Button variant={banner ? 'secondary' : 'default'} size="lg">
           {props.primary}
         </Button>
         {props.secondary && (
           <Button
             variant="ghost"
             size="lg"
-            className="text-primary-foreground hover:bg-primary-foreground/10
-              hover:text-primary-foreground"
+            className={cn(
+              banner &&
+                `text-primary-foreground hover:bg-primary-foreground/10
+                hover:text-primary-foreground`,
+            )}
           >
             {props.secondary}
           </Button>
@@ -346,5 +508,82 @@ export function List({ props }: PropsOf<'List'>) {
         <li key={index}>{item}</li>
       ))}
     </Tag>
+  )
+}
+
+type PricingProps = PropsOf<'PricingTable'>['props']
+
+// All plans in one table: features as rows, plans as columns
+function PricingComparison(props: PricingProps) {
+  const plans = list(props.plans)
+  const features = uniq(plans.flatMap((plan) => list(plan.features)))
+  return (
+    <div
+      className={cn(
+        'w-full overflow-x-auto rounded-xl border bg-card',
+        props.className,
+      )}
+    >
+      <table className="w-full min-w-[560px] text-sm">
+        <thead>
+          <tr className="border-b">
+            <th className="p-4 text-left font-medium text-muted-foreground">
+              Features
+            </th>
+            {plans.map((plan, index) => (
+              <th
+                key={index}
+                className={cn(
+                  'p-4 text-center',
+                  plan.highlighted && 'bg-primary/5',
+                )}
+              >
+                <div className="font-semibold">{plan.name}</div>
+                <div className="mt-1 text-2xl font-bold">
+                  {plan.price}
+                  {plan.period && (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {plan.period}
+                    </span>
+                  )}
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {features.map((feature, row) => (
+            <tr key={row} className="border-b last:border-0">
+              <td className="p-4">{feature}</td>
+              {plans.map((plan, index) => (
+                <td
+                  key={index}
+                  className={cn(
+                    'p-4 text-center',
+                    plan.highlighted && 'bg-primary/5',
+                  )}
+                >
+                  {list(plan.features).includes(feature) ? (
+                    <CheckIcon className="mx-auto size-4 text-primary" />
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+          <tr>
+            <td />
+            {plans.map((plan, index) => (
+              <td key={index} className="p-4 text-center">
+                <Button variant={plan.highlighted ? 'default' : 'outline'}>
+                  {plan.cta}
+                </Button>
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
   )
 }

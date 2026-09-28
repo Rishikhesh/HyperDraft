@@ -35,6 +35,8 @@ type Props = {
   selection: { id: string; type: string } | null
   hint: string // shown when nothing is selected
   onClearSelection: () => void
+  // Select the element around the selected one (null: it's the page)
+  onSelectParent: (() => void) | null
   onSend: (text: string) => void
   onStop: () => void
   // New UI or modify the current one; "auto" lets Jev decide
@@ -55,6 +57,7 @@ export default function ChatPanel({
   selection,
   hint,
   onClearSelection,
+  onSelectParent,
   onSend,
   onStop,
   mode,
@@ -109,10 +112,22 @@ export default function ChatPanel({
         >
           <span className="font-medium">{selection.type}</span>
           <span className="text-muted-foreground">{selection.id}</span>
+          {onSelectParent && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="ml-auto"
+              aria-label="Select the element around it"
+              title="Select the element around it"
+              onClick={onSelectParent}
+            >
+              <ArrowUpIcon />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon-xs"
-            className="ml-auto"
+            className={cn(!onSelectParent && 'ml-auto')}
             aria-label="Clear selection"
             onClick={onClearSelection}
           >

@@ -8,7 +8,13 @@ export type ChatRequest = {
   selectedId: string | null
   // "auto": Jev decides. "create"/"edit": the user chose it.
   mode?: RequestMode
+  // The user's earlier messages, oldest first, so "the bridge" or "add
+  // a timeline to it" can be understood
+  history?: string[]
 }
+
+// How many earlier messages are sent along (and accepted)
+export const MAX_HISTORY_MESSAGES = 6
 
 export type RequestMode = 'auto' | 'create' | 'edit'
 

@@ -16,7 +16,6 @@ bun dev                # app on http://localhost:5173, API on :3001
 ```sh
 bun run build   # builds the app into dist/
 bun start       # one server: app + API on $PORT (default 3001)
-bun run test    # self-checks: URL cleaning, rate limit, AI retries
 ```
 
 `bun start` serves the built app and the API from one process, so any host that
@@ -44,40 +43,58 @@ saved in the visitor's browser only, and small models sometimes skip details
 ## How it works
 
 ```
-message ─► Jev (one call, ~1s): intent, page type, components,
-           and for edits: what kind of edit, on which element
+message ─► Jev (one call, ~1s): new page or edit, which elements it
+           touches, option values, what kind of change
+   ├─ new focused thing (a form, a table) ─► one section, built by the LLM;
+   │                                          Jev picks the page's look
+   ├─ new page ─► LLM plans it (direction + sections, streamed)
+   │              └─ each section built by its own LLM call as soon as
+   │                 it's planned, 4 at a time; Jev samples its layouts
    ├─ remove / change an option ─► code does it (no LLM, ~1s)
-   └─ everything else ─► LLM: a sentence for the user, then JSON patches
+   └─ other edits ─► LLM sees only the elements in scope; code rejects
+                      changes outside it
 preview ◄─ patches stream in and animate; chat shows each step live
 ```
 
-| File                       | Job                                             |
-| -------------------------- | ----------------------------------------------- |
-| `src/App.tsx`              | Owns the spec, history (undo), mode, selection  |
-| `src/ChatPanel.tsx`        | Chat UI (display only)                          |
-| `src/chat.ts`              | Reads the server's event stream                 |
-| `src/Preview.tsx`          | Runs in the iframe, renders whatever it is sent |
-| `src/messages.ts`          | Messages between the app and the iframe         |
-| `src/api.ts`               | Messages between the app and the server         |
-| `src/catalog.ts`           | Components the AI may use (no React)            |
-| `src/registry.ts`          | Component name → React component                |
-| `src/patch.ts`             | Applies patches without changing the old spec   |
-| `server/index.ts`          | `/api/chat`: Jev, then LLM, then validate       |
-| `server/jev.ts`            | Jev decisions (TypeSafe)                        |
-| `src/blocks/layout.tsx`    | Page, Navbar, Hero, Section, Footer             |
-| `src/blocks/marketing.tsx` | FeatureGrid, PricingTable, Testimonials, ...    |
-| `src/blocks/app.tsx`       | TabbedContent, Carousel, Marquee, AppShell, ... |
-| `src/blocks/overrides.tsx` | Fixes to json-render's own components           |
-| `src/components/ui/`       | shadcn + Magic UI (MIT) effects, via shadcn CLI |
-| `server/outlines.ts`       | Page outline per type, picked by Jev            |
-| `server/repair.ts`         | Fixes small model slips (missing brackets)      |
-| `src/storage.ts`           | Saves the session in the browser                |
-| `src/ErrorBoundary.tsx`    | Shows a message if a UI fails to render         |
-| `server/design-rules.ts`   | Design instructions added to the AI prompt      |
-| `server/sanitize.ts`       | Makes AI-written links and images safe          |
-| `server/rate-limit.ts`     | Requests per visitor per minute                 |
-| `server/static.ts`         | Serves the built app in production              |
-| `server/llm.ts`            | LLM streaming (Google, NVIDIA)                  |
+| File                        | Job                                             |
+| --------------------------- | ----------------------------------------------- |
+| `src/App.tsx`               | Owns the spec, history (undo), mode, selection  |
+| `src/ChatPanel.tsx`         | Chat UI (display only)                          |
+| `src/chat.ts`               | Reads the server's event stream                 |
+| `src/Preview.tsx`           | Runs in the iframe, renders whatever it is sent |
+| `src/messages.ts`           | Messages between the app and the iframe         |
+| `src/api.ts`                | Messages between the app and the server         |
+| `src/catalog.ts`            | Components the AI may use (no React)            |
+| `src/registry.tsx`          | Component name → React (big groups load lazily) |
+| `src/patch.ts`              | Applies patches without changing the old spec   |
+| `src/storage.ts`            | Saves the session in the browser                |
+| `src/ErrorBoundary.tsx`     | Shows a message if a UI fails to render         |
+| `src/blocks/definitions.ts` | Block props and descriptions (no React)         |
+| `src/blocks/layout.tsx`     | Page, Navbar, Hero, Section, Footer, Split      |
+| `src/blocks/marketing.tsx`  | FeatureGrid, PricingTable, Testimonials, ...    |
+| `src/blocks/app.tsx`        | TabbedContent, Carousel, Marquee, AppShell      |
+| `src/blocks/chart.tsx`      | Charts (recharts), loaded on first use          |
+| `src/blocks/showcase.tsx`   | Device frames, terminal, globe, logos, ...      |
+| `src/blocks/app-parts.tsx`  | Date picker, OTP, command menu, sheet, ...      |
+| `src/blocks/effects.tsx`    | Title effects and card borders                  |
+| `src/blocks/overrides.tsx`  | json-render's Button/Card/Heading, extended     |
+| `src/components/ui/`        | shadcn + Magic UI (MIT), via the shadcn CLI     |
+| `server/index.ts`           | Bun server: /api/chat and the built app         |
+| `server/chat.ts`            | /api/chat: rate limit, validate, stream events  |
+| `api/chat.ts`               | The same handler as a Vercel function           |
+| `server/generate.ts`        | Jev, then code or the LLM, for each message     |
+| `server/jev.ts`             | Jev decisions (TypeSafe)                        |
+| `server/describe.ts`        | The UI as words Jev can read                    |
+| `server/plan.ts`            | Plans a new page (streamed JSON)                |
+| `server/sections.ts`        | Builds a new page's sections in parallel        |
+| `server/tracker.ts`         | Applies and streams LLM patches                 |
+| `server/edit.ts`            | Removes, sets options, finds an edit's scope    |
+| `server/repair.ts`          | Fixes model slips: brackets, props, containers  |
+| `server/design-rules.ts`    | Design instructions added to the AI prompt      |
+| `server/llm.ts`             | LLM streaming per job (Google, NVIDIA)          |
+| `server/sanitize.ts`        | Makes AI-written links and images safe          |
+| `server/rate-limit.ts`      | Requests per visitor per minute                 |
+| `server/static.ts`          | Serves the built app in production              |
 
 The LLM runs on your own free Google AI Studio and NVIDIA quotas, trying the
 models in `LLM_MODELS` in order. Jev answers greetings without using the LLM.

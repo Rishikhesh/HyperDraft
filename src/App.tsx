@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { compact, get, isString, last, startCase } from 'lodash-es'
+import {
+  compact,
+  findKey,
+  get,
+  includes,
+  isString,
+  last,
+  startCase,
+} from 'lodash-es'
 import type { Spec } from '@json-render/core'
 import {
   DownloadIcon,
@@ -12,7 +20,7 @@ import {
   SunIcon,
   Undo2Icon,
 } from 'lucide-react'
-import type { ChatEvent, RequestMode } from '@/api'
+import { MAX_HISTORY_MESSAGES, type ChatEvent, type RequestMode } from '@/api'
 import { streamChat } from '@/chat'
 import ChatPanel, { type ChatMessage } from '@/ChatPanel'
 import { Button } from '@/components/ui/button'
@@ -70,6 +78,12 @@ export default function App() {
   // The clicked element. Ignored if it no longer exists (e.g. after undo).
   const [clickedId, setClickedId] = useState<string | null>(null)
   const selectedId = clickedId && spec.elements[clickedId] ? clickedId : null
+  // The element around the selection, for the "select parent" button
+  const parentId = selectedId
+    ? (findKey(spec.elements, (element) =>
+        includes(element.children, selectedId),
+      ) ?? null)
+    : null
 
   // A message still "live" from before a reload can't finish any more
   // New UI / Modify / Auto (Jev decides), chosen above the message box
@@ -145,6 +159,11 @@ export default function App() {
   }
 
   async function send(text: string) {
+    // What was said before this, for context (captured before adding)
+    const history = messages
+      .filter((message) => message.role === 'user')
+      .map((message) => message.text)
+      .slice(-MAX_HISTORY_MESSAGES)
     addMessage({ role: 'user', text })
     setBusy(true)
     const controller = new AbortController()
@@ -247,7 +266,7 @@ export default function App() {
 
     try {
       await streamChat(
-        { message: text, spec, selectedId, mode: requestMode },
+        { message: text, spec, selectedId, mode: requestMode, history },
         onEvent,
         controller.signal,
       )
@@ -331,6 +350,11 @@ export default function App() {
             : 'Switch to Edit to select an element.'
         }
         onClearSelection={() => setClickedId(null)}
+        onSelectParent={
+          parentId && parentId !== spec.root
+            ? () => setClickedId(parentId)
+            : null
+        }
         onSend={send}
         onStop={stop}
         mode={requestMode}

@@ -37,6 +37,22 @@ export function removePatches(spec: Spec, id: string): JsonPatch[] | null {
   return [...unlink, ...remove]
 }
 
+// The elements an edit may touch: the targets, everything inside them,
+// and (to add something next to them) their parents
+export function scopeOf(
+  spec: Spec,
+  ids: string[],
+  withParents: boolean,
+): Set<string> {
+  const scope = new Set(ids.flatMap((id) => [id, ...descendants(spec, id)]))
+  if (withParents) {
+    for (const [parentId, element] of toPairs(spec.elements)) {
+      if (ids.some((id) => includes(element.children, id))) scope.add(parentId)
+    }
+  }
+  return scope
+}
+
 function descendants(spec: Spec, id: string, seen = new Set<string>()) {
   const children = get(spec.elements, [id, 'children'], []) as string[]
   return flatMap(children, (child): string[] => {

@@ -2,7 +2,11 @@
 // Plain Web Request/Response, so it runs under Bun.serve (server/index.ts)
 // and as a Vercel function (api/chat.ts) alike.
 import { includes, isArray, isPlainObject, isString, size } from 'lodash-es'
-import type { ChatEvent, ChatRequest } from '../src/api'
+import {
+  MAX_HISTORY_MESSAGES,
+  type ChatEvent,
+  type ChatRequest,
+} from '../src/api'
 import { generate } from './generate'
 import { BusyError } from './llm'
 import { createRateLimiter } from './rate-limit'
@@ -35,7 +39,7 @@ export async function chat(request: Request, ip?: string): Promise<Response> {
   const body = (await request.json().catch(() => null)) as ChatRequest | null
   const problem = checkRequest(body)
   if (problem) return Response.json({ error: problem }, { status: 400 })
-  const { message, spec, selectedId, mode = 'auto' } = body!
+  const { message, spec, selectedId, mode = 'auto', history = [] } = body!
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
@@ -43,7 +47,11 @@ export async function chat(request: Request, ip?: string): Promise<Response> {
       const send = (event: ChatEvent) =>
         controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'))
       try {
-        await generate(message, spec, selectedId, mode, send, request.signal)
+        await generate(
+          { message, spec, selectedId, mode, history },
+          send,
+          request.signal,
+        )
       } catch (error) {
         // The browser gave up (closed tab, new message): nothing to report
         if (request.signal.aborted) return
@@ -93,6 +101,15 @@ function checkRequest(body: ChatRequest | null): string | null {
   if (!includes([undefined, 'auto', 'create', 'edit'], body.mode)) {
     return 'mode is invalid'
   }
+  const { history } = body
+  const badHistory =
+    history !== undefined &&
+    (!isArray(history) ||
+      history.length > MAX_HISTORY_MESSAGES ||
+      history.some(
+        (text) => !isString(text) || text.length > MAX_MESSAGE_LENGTH,
+      ))
+  if (badHistory) return 'history is invalid'
   if (body.spec.state !== undefined && !isPlainObject(body.spec.state)) {
     return 'spec is invalid'
   }

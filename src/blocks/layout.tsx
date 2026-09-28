@@ -5,15 +5,21 @@ import type { BaseComponentProps } from '@json-render/react'
 import { MenuIcon, XIcon } from 'lucide-react'
 import type { z } from 'zod'
 import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern'
-import { AuroraText } from '@/components/ui/aurora-text'
+import { BlurFade } from '@/components/ui/blur-fade'
 import { Button } from '@/components/ui/button'
 import { DotPattern } from '@/components/ui/dot-pattern'
+import { FlickeringGrid } from '@/components/ui/flickering-grid'
+import { HexagonPattern } from '@/components/ui/hexagon-pattern'
+import { LightRays } from '@/components/ui/light-rays'
 import { Meteors } from '@/components/ui/meteors'
+import { NoiseTexture } from '@/components/ui/noise-texture'
 import { Particles } from '@/components/ui/particles'
+import { RetroGrid } from '@/components/ui/retro-grid'
 import { Ripple } from '@/components/ui/ripple'
-import { TypingAnimation } from '@/components/ui/typing-animation'
+import { StripedPattern } from '@/components/ui/striped-pattern'
 import { cn } from '@/lib/utils'
 import type { blockDefinitions } from './definitions'
+import { TextEffect } from './effects'
 import { list } from './safe'
 
 type Defs = typeof blockDefinitions
@@ -39,6 +45,11 @@ const pageBackgrounds = {
   meteors: 'bg-background',
   particles: 'bg-background',
   ripple: 'bg-background',
+  'flickering-grid': 'bg-background',
+  'retro-grid': 'bg-background',
+  hexagons: 'bg-background',
+  stripes: 'bg-background',
+  'light-rays': 'bg-background',
 }
 
 // Soft edges, so a pattern fades out instead of ending in a hard line
@@ -58,6 +69,19 @@ const backgroundLayers: Partial<Record<string, React.ReactNode>> = {
   // Canvas colors can't read theme variables; indigo reads in both modes
   particles: <Particles className="absolute inset-0" color="#818cf8" />,
   ripple: <Ripple />,
+  'flickering-grid': (
+    <FlickeringGrid
+      className={cn('absolute inset-0 size-full', fade)}
+      color="#818cf8"
+      maxOpacity={0.3}
+      squareSize={4}
+      gridGap={6}
+    />
+  ),
+  'retro-grid': <RetroGrid />,
+  hexagons: <HexagonPattern className={cn('fill-transparent', fade)} />,
+  stripes: <StripedPattern className={cn('text-foreground/15', fade)} />,
+  'light-rays': <LightRays color="rgba(129, 140, 248, 0.25)" />,
 }
 
 export function Page({ props, children }: PropsOf<'Page'>) {
@@ -97,6 +121,11 @@ export function Page({ props, children }: PropsOf<'Page'>) {
             motion-reduce:hidden"
         >
           {backgroundLayers[background]}
+        </div>
+      )}
+      {props.texture === 'noise' && (
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <NoiseTexture noiseOpacity={0.4} />
         </div>
       )}
       {children}
@@ -160,13 +189,15 @@ export function Navbar({ props }: PropsOf<'Navbar'>) {
 }
 
 export function Hero({ props, children }: PropsOf<'Hero'>) {
-  const centered = props.align !== 'left'
-  return (
-    <section
+  const layout = props.layout ?? 'centered'
+  const image = props.image || undefined
+  const centered =
+    layout === 'background' || (layout === 'centered' && props.align !== 'left')
+  const text = (
+    <div
       className={cn(
-        'mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-20 md:py-28',
+        'flex flex-col gap-6',
         centered ? 'items-center text-center' : 'items-start',
-        props.className,
       )}
     >
       {props.eyebrow && (
@@ -177,36 +208,87 @@ export function Hero({ props, children }: PropsOf<'Hero'>) {
           {props.eyebrow}
         </span>
       )}
-      <h1
-        className={cn(
-          'text-4xl font-bold tracking-tight text-balance',
-          'md:text-6xl',
-        )}
-      >
-        <HeroTitle text={props.title} effect={props.titleEffect} />
+      <h1 className="text-4xl font-bold tracking-tight text-balance md:text-6xl">
+        <TextEffect
+          text={props.title}
+          effect={props.titleEffect}
+          words={props.words}
+        />
       </h1>
       {props.subtitle && (
-        <p className="max-w-2xl text-lg text-pretty text-muted-foreground">
+        <p
+          className={cn(
+            'max-w-2xl text-lg text-pretty',
+            layout === 'background' ? 'text-white/80' : 'text-muted-foreground',
+          )}
+        >
           {props.subtitle}
         </p>
       )}
       {children}
+    </div>
+  )
+
+  if (layout === 'split') {
+    // Text beside the image; phones stack them
+    return (
+      <section
+        className={cn(
+          'mx-auto grid w-full max-w-6xl items-center gap-10 px-6 py-16',
+          'md:grid-cols-2 md:py-24',
+          props.className,
+        )}
+      >
+        {text}
+        <div
+          className="relative aspect-4/3 overflow-hidden rounded-2xl border
+            bg-linear-to-br from-indigo-500/30 via-fuchsia-500/20 to-sky-500/30"
+        >
+          {image && (
+            <img
+              src={image}
+              alt={props.imageAlt ?? ''}
+              className="absolute inset-0 size-full object-cover"
+              onError={(event) => (event.currentTarget.hidden = true)}
+            />
+          )}
+        </div>
+      </section>
+    )
+  }
+  if (layout === 'background') {
+    // The image fills the hero; a dark veil keeps the text readable
+    return (
+      <section
+        className={cn(
+          'relative isolate flex w-full items-center justify-center',
+          'overflow-hidden bg-neutral-900 px-6 py-28 text-white md:py-40',
+          props.className,
+        )}
+      >
+        {image && (
+          <img
+            src={image}
+            alt={props.imageAlt ?? ''}
+            className="absolute inset-0 -z-10 size-full object-cover"
+            onError={(event) => (event.currentTarget.hidden = true)}
+          />
+        )}
+        <div aria-hidden className="absolute inset-0 -z-10 bg-black/55" />
+        <div className="max-w-4xl">{text}</div>
+      </section>
+    )
+  }
+  return (
+    <section
+      className={cn(
+        'mx-auto w-full max-w-4xl px-6 py-20 md:py-28',
+        props.className,
+      )}
+    >
+      {text}
     </section>
   )
-}
-
-function HeroTitle({
-  text,
-  effect,
-}: {
-  text: string
-  effect: 'none' | 'typing' | 'aurora' | null | undefined
-}) {
-  if (effect === 'aurora') return <AuroraText>{text}</AuroraText>
-  if (effect === 'typing') {
-    return <TypingAnimation as="span">{text}</TypingAnimation>
-  }
-  return text
 }
 
 const sectionWidths = {
@@ -234,7 +316,11 @@ export function Section({ props, children }: PropsOf<'Section'>) {
           <div className="flex flex-col gap-2 text-center">
             {props.title && (
               <h2 className="text-3xl font-bold tracking-tight">
-                {props.title}
+                <TextEffect
+                  text={props.title}
+                  effect={props.titleEffect}
+                  words={props.words}
+                />
               </h2>
             )}
             {props.subtitle && (
@@ -242,7 +328,13 @@ export function Section({ props, children }: PropsOf<'Section'>) {
             )}
           </div>
         )}
-        {children}
+        {props.reveal === 'fade' ? (
+          <BlurFade inView className="flex flex-col gap-8">
+            {children}
+          </BlurFade>
+        ) : (
+          children
+        )}
       </div>
     </section>
   )

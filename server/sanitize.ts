@@ -16,8 +16,8 @@ export function safeUrl(key: 'href' | 'src', url: string): string {
   return key === 'href' ? '#' : ''
 }
 
-// Props that hold an image URL (our blocks call it "image")
-const IMAGE_KEYS = ['src', 'image']
+// Props that hold an image or video URL (our blocks: "image", "video")
+const IMAGE_KEYS = ['src', 'image', 'video']
 
 // Returns a copy of any JSON value with every link/image URL made safe,
 // however deeply nested (e.g. Navbar links: [{ label, href }]).

@@ -1,44 +1,72 @@
 // The LLM: writes the UI as JSON patch lines, streamed as they arrive.
 // Every provider here speaks the same OpenAI-compatible API.
 
-// `extra` is added to every request body for that provider
-const PROVIDERS: Record<string, { url: string; key?: string; extra?: object }> =
+// `thinking` gives the request body fields that let a model think
+// before answering (better plans) or not (faster output)
+const PROVIDERS: Record<
+  string,
   {
-    google: {
-      url: 'https://generativelanguage.googleapis.com/v1beta/openai',
-      key: process.env.GOOGLE_API_KEY,
-    },
-    nvidia: {
-      url: 'https://integrate.api.nvidia.com/v1',
-      key: process.env.NVIDIA_API_KEY,
-      // Otherwise models "think" first: 90s+ before any UI appears
-      extra: { chat_template_kwargs: { enable_thinking: false } },
-    },
+    url: string
+    key?: string
+    thinking?: (model: string, on: boolean) => object
   }
+> = {
+  google: {
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    key: process.env.GOOGLE_API_KEY,
+    // Gemini takes reasoning_effort; Gemma rejects it (HTTP 400)
+    thinking: (model, on) =>
+      model.startsWith('gemini')
+        ? { reasoning_effort: on ? 'low' : 'none' }
+        : {},
+  },
+  nvidia: {
+    url: 'https://integrate.api.nvidia.com/v1',
+    key: process.env.NVIDIA_API_KEY,
+    thinking: (_, on) => ({ chat_template_kwargs: { enable_thinking: on } }),
+  },
+}
 type Model = { provider: string; name: string }
 
-// LLM_MODELS="google:gemini-3.1-flash-lite,nvidia:nvidia/nemotron-…"
+// What the LLM is used for. Each job can have its own models:
+// planning a page wants the strongest model and may think; building
+// sections and edits want fast models that answer right away.
+export type Job = 'plan' | 'build' | 'edit'
+const THINKS: Record<Job, boolean> = { plan: true, build: false, edit: false }
+// Planning should differ between runs; building should follow the plan
+const TEMPERATURE: Record<Job, number> = { plan: 1, build: 0.7, edit: 0.4 }
+
+// LLM_PLAN_MODELS / LLM_BUILD_MODELS / LLM_EDIT_MODELS, each falling back
+// to LLM_MODELS, e.g. "google:gemini-3.1-flash-lite,nvidia:nvidia/…".
 // Tried in order: a busy model makes the next attempt use the next one.
 // Models whose provider has no key in .env are left out.
-const MODELS: Model[] = (process.env.LLM_MODELS ?? '')
-  .split(',')
-  .map((entry) => entry.trim())
-  .filter(Boolean)
-  .map((entry) => {
-    const colon = entry.indexOf(':') // model names can contain "/" but not ":"
-    const provider = entry.slice(0, colon)
-    if (!(provider in PROVIDERS)) {
-      throw new Error(`LLM_MODELS: unknown provider in "${entry}"`)
-    }
-    return { provider, name: entry.slice(colon + 1) }
-  })
-  .filter((model) => PROVIDERS[model.provider].key)
+function modelsFor(job: Job): Model[] {
+  const variable = `LLM_${job.toUpperCase()}_MODELS`
+  const list = process.env[variable] || process.env.LLM_MODELS || ''
+  return list
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const colon = entry.indexOf(':') // names can contain "/" but not ":"
+      const provider = entry.slice(0, colon)
+      if (!(provider in PROVIDERS)) {
+        throw new Error(`${variable}: unknown provider in "${entry}"`)
+      }
+      return { provider, name: entry.slice(colon + 1) }
+    })
+    .filter((model) => PROVIDERS[model.provider].key)
+}
 
-const MAX_ATTEMPTS = 3
+const MAX_ATTEMPTS = 3 // at least; every listed model gets one try
 const RETRY_DELAY_MS = 2000 // doubles each attempt: 2s, then 4s
 // A model that sends nothing for this long is given up on: before its
-// first line it counts as busy (try the next model), after it an error
-const IDLE_TIMEOUT_MS = Number(process.env.LLM_IDLE_MS) || 30_000
+// first line it counts as busy (try the next model), after it an error.
+// Thinking (planning) takes longer before the first line.
+const idleTimeout = (job: Job) =>
+  Number(process.env[`LLM_${job.toUpperCase()}_IDLE_MS`]) ||
+  Number(process.env.LLM_IDLE_MS) ||
+  (THINKS[job] ? 90_000 : 30_000)
 
 // The model is overloaded or rate-limited. Worth retrying later;
 // not a bug in our code.
@@ -53,16 +81,20 @@ type Result = { model: string }
 // After that, patches have already reached the preview, and a retry
 // would build a second copy on top of them.
 export async function* streamLines(
+  job: Job,
   system: string,
   user: string,
   signal: AbortSignal,
 ): AsyncGenerator<string, Result> {
-  if (!MODELS.length) {
+  const models = modelsFor(job)
+  if (!models.length) {
     throw new Error('Set LLM_MODELS and a matching API key in .env')
   }
+  const attempts = Math.max(MAX_ATTEMPTS, models.length)
+  const IDLE_TIMEOUT_MS = idleTimeout(job)
 
   for (let attempt = 1; ; attempt++) {
-    const model = MODELS[(attempt - 1) % MODELS.length]
+    const model = models[(attempt - 1) % models.length]
     const label = `${model.provider}:${model.name}`
     // Aborts this request if the model goes quiet for too long.
     // The clock restarts every time a line arrives.
@@ -74,7 +106,7 @@ export async function* streamLines(
     }
     const both = AbortSignal.any([signal, silence.signal])
 
-    const lines = streamOnce(model, system, user, both)
+    const lines = streamOnce(model, job, system, user, both)
     let yieldedAny = false
     try {
       let next = await lines.next()
@@ -94,7 +126,7 @@ export async function* streamLines(
           ? new Error('The AI stopped responding partway. Try again.')
           : new BusyError(`${label} sent nothing`)
       const canRetry = error instanceof BusyError && !yieldedAny
-      if (!canRetry || attempt === MAX_ATTEMPTS || signal.aborted) throw error
+      if (!canRetry || attempt === attempts || signal.aborted) throw error
       console.warn(`${label} busy, retrying (attempt ${attempt + 1})`)
       await Bun.sleep(RETRY_DELAY_MS * 2 ** (attempt - 1))
     } finally {
@@ -106,6 +138,7 @@ export async function* streamLines(
 // One request to one model, no retries
 async function* streamOnce(
   model: Model,
+  job: Job,
   system: string,
   user: string,
   signal: AbortSignal,
@@ -119,7 +152,8 @@ async function* streamOnce(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      ...provider.extra,
+      ...provider.thinking?.(model.name, THINKS[job]),
+      temperature: TEMPERATURE[job],
       model: model.name,
       stream: true,
       messages: [

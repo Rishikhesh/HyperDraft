@@ -1,4 +1,4 @@
-// App-style blocks: tabs, a dashboard layout, and a chart.
+// App-style blocks: tabs, carousel, marquee, dashboard layout.
 import { Children, useState } from 'react'
 import type { BaseComponentProps } from '@json-render/react'
 import { MenuIcon, XIcon } from 'lucide-react'
@@ -180,78 +180,6 @@ export function AppShell({ props, children }: PropsOf<'AppShell'>) {
         )}
         {children}
       </main>
-    </div>
-  )
-}
-
-// Chart drawing area, in SVG units. The SVG scales to its container.
-const WIDTH = 600
-const HEIGHT = 220
-const PAD = 8
-
-export function Chart({ props }: PropsOf<'Chart'>) {
-  const data = list(props.data).filter((point) => Number.isFinite(point.value))
-  const max = Math.max(1, ...data.map((point) => point.value))
-  const step = data.length > 1 ? (WIDTH - PAD * 2) / (data.length - 1) : 0
-  const x = (index: number) => PAD + index * step
-  const y = (value: number) => HEIGHT - PAD - (value / max) * (HEIGHT - PAD * 2)
-  const line = data.map((point, i) => `${x(i)},${y(point.value)}`).join(' ')
-  const barWidth = ((WIDTH - PAD * 2) / Math.max(1, data.length)) * 0.6
-
-  return (
-    <div
-      className={cn(
-        'flex w-full flex-col gap-4 rounded-xl border bg-card p-5',
-        props.className,
-      )}
-    >
-      {props.title && <h3 className="font-semibold">{props.title}</h3>}
-      <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="h-48 w-full text-indigo-500"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={props.title ?? 'Chart'}
-      >
-        {props.type === 'bar' &&
-          data.map((point, i) => {
-            const slot = (WIDTH - PAD * 2) / data.length
-            return (
-              <rect
-                key={i}
-                x={PAD + i * slot + (slot - barWidth) / 2}
-                y={y(point.value)}
-                width={barWidth}
-                height={HEIGHT - PAD - y(point.value)}
-                rx={4}
-                className="fill-current opacity-80"
-              />
-            )
-          })}
-        {props.type === 'area' && data.length > 1 && (
-          <polygon
-            points={`${x(0)},${HEIGHT - PAD} ${line} ${x(data.length - 1)},${
-              HEIGHT - PAD
-            }`}
-            className="fill-current opacity-15"
-          />
-        )}
-        {props.type !== 'bar' && (
-          <polyline
-            points={line}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={3}
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        )}
-      </svg>
-      <div className="flex justify-between text-xs text-muted-foreground">
-        {data.map((point, i) => (
-          <span key={i}>{point.label}</span>
-        ))}
-      </div>
     </div>
   )
 }

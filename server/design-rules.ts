@@ -1,20 +1,27 @@
 // Extra instructions for the LLM, added to json-render's own rules.
-// General design principles, not recipes for particular pages: the
-// suggested outline (from Jev's page type) is only a starting point.
+// General design principles, not recipes for particular pages.
 
-export const designRules = [
-  // Talking to the user
+// For edits of a whole page (the LLM sees and changes the Page)
+export const pageRules = [
   'Start with one or two plain sentences (no markdown) telling the user ' +
-    'what you are building: the layout and its main parts. They see ' +
-    'this while the UI appears.',
+    'what you are changing. They see this while the UI updates.',
+  'The root element is ALWAYS a Page.',
+]
 
-  // Structure
-  'The root element is ALWAYS a Page. Pick the background for the mood: ' +
-    '"gradient" or "aurora" for marketing and welcoming screens, "grid" ' +
-    'for technical products, "muted" or "plain" for tools and data.',
-  'Include everything the request names. If a suggested structure is ' +
-    'given, use it as a starting point: add, drop or reorder parts so ' +
-    'it fits the request.',
+// For building one section of a new page, in parallel with the others
+export const sectionRules = [
+  'You build ONE section of a page; the Page, its background and the ' +
+    'other sections are built separately. Never create a Page and ' +
+    'never set /root. Write patches only, no other text.',
+  "The section's outermost element must use the id you are given; " +
+    'every other element you create starts with that id and a dash.',
+  'Follow the design direction you are given, so the sections look ' +
+    'like one page.',
+]
+
+// For everything
+export const designRules = [
+  'Include everything the request names.',
   'Build exactly what is asked for, polished and complete in itself, ' +
     'but do not add parts nobody asked for. Write realistic copy ' +
     '(names, prices with currency, labels). No lorem ipsum.',
@@ -54,10 +61,12 @@ export const designRules = [
     '"marquee". Photos, products or simple slides: Carousel with ' +
     'autoplay true. Anything richer is a Marquee whose children are ' +
     'the slides, each a real element (Card, Image). ' +
-    'Ready-made effects: Page background "dots", "animated-grid", ' +
-    '"meteors", "particles", "ripple"; Hero titleEffect "typing" or ' +
-    '"aurora". Use them when the request asks for motion, effects or ' +
-    'something eye-catching.',
+    'Components have effect options (Page background and texture, ' +
+    'titleEffect, cardEffect, Button effect, Section reveal, Stats ' +
+    'countUp): their descriptions say what each looks like. Use them ' +
+    'when the request asks for motion, effects or something ' +
+    'eye-catching, and pick what fits the mood. One or two standout ' +
+    'effects per page beat many competing ones.',
   'Motion is welcome but subtle. Card-based blocks take hover "lift" or ' +
     '"glow". In className you may use: ' +
     '"motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-700" ' +
